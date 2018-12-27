@@ -1,0 +1,14 @@
+Download Links
+  https://github.com/lunu-bounir/xapain.js/releases/tag/0.1.5
+
+  MD5 (xapian.js) = e25da8a28b3300d2e3c30f277c5f0399
+  MD5 (xapian.js.mem) = 1f723df700f3f1a4161026d629399dda
+
+Source code
+  https://github.com/lunu-bounir/xapain.js/blob/master/xapian.cc
+
+Build
+  https://github.com/lunu-bounir/xapain.js/blob/master/.travis.yml
+
+Log
+  https://travis-ci.org/lunu-bounir/xapain.js/builds/472593572
