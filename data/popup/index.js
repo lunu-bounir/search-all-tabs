@@ -115,10 +115,10 @@ document.getElementById('search').addEventListener('input', e => {
   if (query && ready) {
     const start = Date.now();
     // detect input language
-    chrome.i18n.detectLanguage(query, obj => {
+    chrome.i18n.detectLanguage(query, async obj => {
       const lang = detectLanguage(obj && obj.languages.length ? obj.languages[0].language : 'en');
 
-      const {size, estimated} = xapian.query({
+      const {size, estimated} = xapian.search({
         query,
         lang
       });
@@ -133,7 +133,7 @@ document.getElementById('search').addEventListener('input', e => {
 
       const t = document.getElementById('result');
       for (let index = 0; index < size; index += 1) {
-        const obj = xapian.data(index);
+        const obj = await xapian.search.body(index);
         const clone = document.importNode(t.content, true);
         clone.querySelector('a').href = obj.url;
         Object.assign(clone.querySelector('a').dataset, {
@@ -145,7 +145,7 @@ document.getElementById('search').addEventListener('input', e => {
         clone.querySelector('h2 span').textContent = obj.title;
         clone.querySelector('h2 img').src = obj.favIconUrl || 'chrome://favicon/' + obj.url;
         const code = clone.querySelector('h2 code');
-        const percent = xapian.percent(index);
+        const percent = xapian.search.percent(index);
         code.textContent = percent + '%';
         if (percent > 80) {
           code.style['background-color'] = 'green';
@@ -156,10 +156,9 @@ document.getElementById('search').addEventListener('input', e => {
         else {
           code.style['background-color'] = 'gray';
         }
-        const snippet = xapian.snippet({
+        const snippet = await xapian.search.snippet({
           index
         });
-        console.log(obj, snippet);
         // the HTML code that is returns from snippet is escaped
         // https://xapian.org/docs/apidoc/html/classXapian_1_1MSet.html#a6f834ac35fdcc58fcd5eb38fc7f320f1
         clone.querySelector('p').innerHTML = snippet || 'no preview';
@@ -190,6 +189,7 @@ document.addEventListener('click', e => {
         frameId,
         snippet
       });
+      e.preventDefault();
     }
     else if (cmd === 'faqs') {
       chrome.tabs.create({

@@ -21,7 +21,6 @@ chrome.runtime.sendMessage({
       });
       for (const section of sections) {
         if (window.find(section.replace(/<\/?b>/g, ''), false, false, true)) {
-          console.log('done', section);
           break;
         }
       }
