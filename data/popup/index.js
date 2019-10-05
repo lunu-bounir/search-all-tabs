@@ -68,14 +68,23 @@ const index = tab => Promise.race([new Promise(resolve => chrome.tabs.executeScr
 })), new Promise(resolve => setTimeout(() => resolve(0), 1000))]);
 
 document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs => {
+  let ignored = 0;
   docs = (await Promise.all(
     tabs.map(tab => tab.discarded ? Promise.resolve(0) : index(tab))
-  )).reduce((p, c) => p + c, 0);
+  )).reduce((p, c) => {
+    if (c === 0) {
+      ignored += 1;
+    }
+    return p + c;
+  }, 0);
   if (docs === 0) {
     root.dataset.empty = 'Nothing to index. You need to have some tabs open.';
   }
   else {
-    root.dataset.empty = `Database is ready! Searching among ${docs} document(s)`;
+    root.dataset.empty = `Searching among ${docs} document(s)`;
+    if (ignored) {
+      root.dataset.empty += `. ${ignored} tab(s) are ignored`;
+    }
   }
   ready = true;
   // do we have anything to search
@@ -86,17 +95,30 @@ document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs
     }));
   }
   else {
-    // do we have selected text
-    chrome.tabs.executeScript({
-      code: 'window.getSelection().toString()',
-      runAt: 'document_start'
-    }, arr => {
-      if (chrome.runtime.lastError || input.value) {
-        return;
+    chrome.storage.local.get({
+      mode: 'selected',
+      query: ''
+    }, prefs => {
+      if (prefs.mode === 'selected') {
+        // do we have selected text
+        chrome.tabs.executeScript({
+          code: 'window.getSelection().toString()',
+          runAt: 'document_start'
+        }, arr => {
+          if (chrome.runtime.lastError || input.value) {
+            return;
+          }
+          const query = arr.reduce((p, c) => p || c, '');
+          if (query) {
+            input.value = query;
+            input.dispatchEvent(new Event('input', {
+              bubbles: true
+            }));
+          }
+        });
       }
-      const query = arr.reduce((p, c) => p || c, '');
-      if (query) {
-        input.value = query;
+      else if (prefs.mode === 'history' && prefs.query) {
+        input.value = prefs.query;
         input.dispatchEvent(new Event('input', {
           bubbles: true
         }));
@@ -175,6 +197,8 @@ document.getElementById('search').addEventListener('input', e => {
     info.textContent = '';
     delete root.dataset.size;
   }
+  // save last query
+  chrome.storage.local.set({query});
 });
 
 document.addEventListener('click', e => {
@@ -205,7 +229,6 @@ document.addEventListener('click', e => {
 
 // keyboard shortcut
 window.addEventListener('keydown', e => {
-  console.log(e);
   if (e.metaKey || e.ctrlKey) {
     if (e.code && e.code.startsWith('Digit')) {
       const index = Number(e.code.replace('Digit', ''));

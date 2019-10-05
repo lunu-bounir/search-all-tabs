@@ -25,7 +25,41 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
     cache[sender.tab.id];
   }
 });
+// Contextmenu
+{
+  const startup = () => chrome.storage.local.get({
+    mode: 'selected'
+  }, prefs => {
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'mode:selected',
+      title: 'Automatically Search the Selected Text',
+      contexts: ['browser_action'],
+      checked: prefs.mode === 'selected'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'mode:history',
+      title: 'Automatically Search the last Query',
+      contexts: ['browser_action'],
+      checked: prefs.mode === 'history'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'mode:none',
+      title: 'Turn off Automatic Seach',
+      contexts: ['browser_action'],
+      checked: prefs.mode === 'none'
+    });
+  });
+  chrome.runtime.onStartup.addListener(startup);
+  chrome.runtime.onInstalled.addListener(startup);
+}
+chrome.contextMenus.onClicked.addListener(info => chrome.storage.local.set({
+  mode: info.menuItemId.replace('mode:', '')
+}));
 
+// FAQs and Feedback
 {
   const {onInstalled, setUninstallURL, getManifest} = chrome.runtime;
   const {name, version} = getManifest();
