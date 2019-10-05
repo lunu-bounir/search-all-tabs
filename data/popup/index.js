@@ -1,10 +1,10 @@
 /* globals xapian */
 'use strict';
 
-var ready = false;
-var docs = 0;
+let ready = false;
+let docs = 0;
 
-var detectLanguage = code => {
+const detectLanguage = code => {
   code = code.split('-')[0];
 
   return ({
@@ -38,7 +38,7 @@ var detectLanguage = code => {
   })[code] || 'english';
 };
 
-var index = tab => Promise.race([new Promise(resolve => chrome.tabs.executeScript(tab.id, {
+const index = tab => Promise.race([new Promise(resolve => chrome.tabs.executeScript(tab.id, {
   runAt: 'document_start',
   allFrames: true,
   file: '/data/collect.js'
@@ -65,7 +65,7 @@ var index = tab => Promise.race([new Promise(resolve => chrome.tabs.executeScrip
       resolve(0);
     }
   }
-})), new Promise((resolve) => setTimeout(() => resolve(0), 1000))]);
+})), new Promise(resolve => setTimeout(() => resolve(0), 1000))]);
 
 document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs => {
   docs = (await Promise.all(
@@ -75,7 +75,7 @@ document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs
     root.dataset.empty = 'Nothing to index. You need to have some tabs open.';
   }
   else {
-    root.dataset.empty = `Search among ${docs} documents`;
+    root.dataset.empty = `Search among ${docs} document(s)`;
   }
   ready = true;
   // do we have anything to search
@@ -105,7 +105,7 @@ document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs
   }
 }));
 
-var root = document.getElementById('results');
+const root = document.getElementById('results');
 
 document.getElementById('search').addEventListener('submit', e => {
   e.preventDefault();

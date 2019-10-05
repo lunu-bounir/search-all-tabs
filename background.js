@@ -1,6 +1,6 @@
 'use strict';
 
-var cache = {};
+const cache = {};
 chrome.tabs.onRemoved.addListener(tabId => delete cache[tabId]);
 
 chrome.runtime.onMessage.addListener((request, sender, response) => {
