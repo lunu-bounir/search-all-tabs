@@ -75,7 +75,7 @@ document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs
     root.dataset.empty = 'Nothing to index. You need to have some tabs open.';
   }
   else {
-    root.dataset.empty = `Search among ${docs} document(s)`;
+    root.dataset.empty = `Database is ready! Searching among ${docs} document(s)`;
   }
   ready = true;
   // do we have anything to search
@@ -141,10 +141,12 @@ document.getElementById('search').addEventListener('input', e => {
         Object.assign(clone.querySelector('a').dataset, {
           tabId: obj.tabId,
           windowId: obj.windowId,
-          frameId: obj.frameId
+          frameId: obj.frameId,
+          index
         });
         clone.querySelector('cite').textContent = obj.url;
-        clone.querySelector('h2 span').textContent = obj.title;
+        clone.querySelector('h2 span[data-id="number"]').textContent = '#' + (index + 1);
+        clone.querySelector('h2 span[data-id="title"]').textContent = obj.title;
         clone.querySelector('h2 img').src = obj.favIconUrl || 'chrome://favicon/' + obj.url;
         const code = clone.querySelector('h2 code');
         const percent = xapian.search.percent(index);
@@ -190,13 +192,28 @@ document.addEventListener('click', e => {
         windowId: Number(windowId),
         frameId,
         snippet
-      });
+      }, () => window.close());
       e.preventDefault();
     }
     else if (cmd === 'faqs') {
       chrome.tabs.create({
         url: chrome.runtime.getManifest().homepage_url
       });
+    }
+  }
+});
+
+// keyboard shortcut
+window.addEventListener('keydown', e => {
+  console.log(e);
+  if (e.metaKey || e.ctrlKey) {
+    if (e.code && e.code.startsWith('Digit')) {
+      const index = Number(e.code.replace('Digit', ''));
+      console.log(index);
+      const a = document.querySelector(`a[data-index="${index - 1}"]`);
+      if (a) {
+        a.click();
+      }
     }
   }
 });

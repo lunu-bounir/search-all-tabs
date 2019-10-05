@@ -3,7 +3,7 @@ body {
   display: flex;
   flex-direction: column;
   margin: 0;
-  font-family: "Helvetica Neue",Helvetica,sans-serif;
+  font-family: "Helvetica Neue", Helvetica, sans-serif;
   font-size: 13px;
   background-color: #f7f7f7;
 }
@@ -102,10 +102,10 @@ h2 {
   display: flex;
   align-items: center;
 }
-.result a:hover h2 {
+.result a:hover h2 span[data-id="title"] {
   text-decoration: underline;
 }
-.result a h2 span {
+.result a h2 span[data-id="title"] {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -127,12 +127,19 @@ h2 {
   width: 16px;
   margin-right: 5px;
 }
+.result h2 span[data-id="number"],
 .result h2 code {
   margin-left: 10px;
   color: #fff;
   padding: 1px 5px;
   font-size: 11px;
-  font-family: arial;
-  min-width: 32px;
+  font-family: arial, sans-serif;
   text-align: center;
+}
+.result h2 code {
+  min-width: 32px;
+}
+.result h2 span[data-id="number"] {
+  min-width: 20px;
+  background-color: gray;
 }
