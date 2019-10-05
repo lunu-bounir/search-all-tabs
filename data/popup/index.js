@@ -38,7 +38,7 @@ var detectLanguage = code => {
   })[code] || 'english';
 };
 
-var index = tab => new Promise(resolve => chrome.tabs.executeScript(tab.id, {
+var index = tab => Promise.race([new Promise(resolve => chrome.tabs.executeScript(tab.id, {
   runAt: 'document_start',
   allFrames: true,
   file: '/data/collect.js'
@@ -65,10 +65,12 @@ var index = tab => new Promise(resolve => chrome.tabs.executeScript(tab.id, {
       resolve(0);
     }
   }
-}));
+})), new Promise((resolve) => setTimeout(() => resolve(0), 1000))]);
 
 document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs => {
-  docs = (await Promise.all(tabs.map(tab => index(tab)))).reduce((p, c) => p + c, 0);
+  docs = (await Promise.all(
+    tabs.map(tab => tab.discarded ? Promise.resolve(0) : index(tab))
+  )).reduce((p, c) => p + c, 0);
   if (docs === 0) {
     root.dataset.empty = 'Nothing to index. You need to have some tabs open.';
   }
