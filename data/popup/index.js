@@ -129,8 +129,14 @@ document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs
 
 const root = document.getElementById('results');
 
+// feel lucky
 document.getElementById('search').addEventListener('submit', e => {
   e.preventDefault();
+  // fire Ctrl + 1
+  window.dispatchEvent(new KeyboardEvent('keydown', {
+    code: 'Digit1',
+    ctrlKey: true
+  }));
 });
 document.getElementById('search').addEventListener('input', e => {
   const query = e.target.value;
@@ -232,7 +238,6 @@ window.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey) {
     if (e.code && e.code.startsWith('Digit')) {
       const index = Number(e.code.replace('Digit', ''));
-      console.log(index);
       const a = document.querySelector(`a[data-index="${index - 1}"]`);
       if (a) {
         a.click();
