@@ -130,13 +130,15 @@ document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs
 const root = document.getElementById('results');
 
 // feel lucky
-document.getElementById('search').addEventListener('submit', e => {
-  e.preventDefault();
+document.getElementById('search').addEventListener('search', () => {
   // fire Ctrl + 1
   window.dispatchEvent(new KeyboardEvent('keydown', {
     code: 'Digit1',
     ctrlKey: true
   }));
+});
+document.getElementById('search').addEventListener('submit', e => {
+  e.preventDefault();
 });
 document.getElementById('search').addEventListener('input', e => {
   const query = e.target.value;
@@ -243,6 +245,9 @@ window.addEventListener('keydown', e => {
         a.click();
       }
     }
+  }
+  else if (e.code === 'Escape' && e.target.value === '') {
+    window.close();
   }
 });
 
