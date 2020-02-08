@@ -38,41 +38,47 @@ const detectLanguage = code => {
   })[code] || 'english';
 };
 
-const index = tab => Promise.race([new Promise(resolve => chrome.tabs.executeScript(tab.id, {
-  runAt: 'document_start',
-  allFrames: true,
-  file: '/data/collect.js'
-}, arr => {
-  try {
-    chrome.runtime.lastError;
-    arr = (arr || [{
-      body: '',
-      date: new Date(document.lastModified).toISOString().split('T')[0].replace(/-/g, ''),
-      description: '',
-      frameId: 0,
-      keywords: '',
-      lang: 'english',
-      mime: 'text/html',
-      title: tab.title,
-      url: tab.url
-    }]).filter(a => a);
-    arr.forEach(o => {
-      o.lang = detectLanguage(o.lang);
-      o.title = o.title || tab.title;
-      xapian.add(o, {
-        tabId: tab.id,
-        windowId: tab.windowId,
-        favIconUrl: tab.favIconUrl,
-        frameId: o.frameId
-      });
+const index = tab => {
+  return Promise.race([new Promise(resolve => {
+    chrome.tabs.executeScript(tab.id, {
+      runAt: 'document_start',
+      allFrames: true,
+      file: '/data/collect.js'
+    }, arr => {
+      chrome.runtime.lastError;
+      resolve(arr);
     });
-    resolve(arr.length);
-  }
-  catch (e) {
-    console.warn('document skipped', e);
-    resolve(0);
-  }
-})), new Promise(resolve => setTimeout(() => resolve(0), 1000))]);
+  }), new Promise(resolve => setTimeout(() => resolve(), 1000))]).then(arr => {
+    try {
+      arr = (arr || [{
+        body: '',
+        date: new Date(document.lastModified).toISOString().split('T')[0].replace(/-/g, ''),
+        description: '',
+        frameId: 0,
+        keywords: '',
+        lang: 'english',
+        mime: 'text/html',
+        title: tab.title,
+        url: tab.url
+      }]).filter(a => a);
+      arr.forEach(o => {
+        o.lang = detectLanguage(o.lang);
+        o.title = o.title || tab.title;
+        xapian.add(o, {
+          tabId: tab.id,
+          windowId: tab.windowId,
+          favIconUrl: tab.favIconUrl,
+          frameId: o.frameId
+        });
+      });
+      return arr.length;
+    }
+    catch (e) {
+      console.error('document skipped', e);
+      return 0;
+    }
+  });
+};
 
 document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs => {
   let ignored = 0;
@@ -138,7 +144,7 @@ document.getElementById('search').addEventListener('submit', e => {
   e.preventDefault();
 });
 document.getElementById('search').addEventListener('input', e => {
-  const query = e.target.value;
+  const query = e.target.value.trim();
   root.textContent = '';
   const info = document.getElementById('info');
   if (query && ready) {
@@ -192,7 +198,7 @@ document.getElementById('search').addEventListener('input', e => {
         });
         // the HTML code that is returns from snippet is escaped
         // https://xapian.org/docs/apidoc/html/classXapian_1_1MSet.html#a6f834ac35fdcc58fcd5eb38fc7f320f1
-        clone.querySelector('p').innerHTML = snippet || 'Preview is not supported for this entry';
+        clone.querySelector('p').innerHTML = snippet;
 
         root.appendChild(clone);
       }
@@ -214,14 +220,13 @@ document.addEventListener('click', e => {
     if (cmd === 'open') {
       const {tabId, windowId, frameId} = a.dataset;
       const snippet = e.target.closest('.result').querySelector('p').innerHTML;
-
       chrome.runtime.sendMessage({
         method: 'find',
         tabId: Number(tabId),
         windowId: Number(windowId),
         frameId,
         snippet
-      }, () => window.close());
+      });
       e.preventDefault();
     }
     else if (cmd === 'faqs') {

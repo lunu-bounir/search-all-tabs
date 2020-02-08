@@ -123,6 +123,9 @@ h2 {
 .result p {
   margin: 0;
 }
+.result p:empty::before {
+  content: 'Preview is not supported for this entry';
+}
 .result img {
   width: 16px;
   margin-right: 5px;

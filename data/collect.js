@@ -11,7 +11,7 @@ var description = document.querySelector('meta[name="Description"]') ||
   url: location.href,
   mime: document.contentType,
   lang: document.documentElement.lang,
-  body: document.body.innerText,
+  body: document.body.innerText.trim(),
   frameId: window.frameId,
   keywords: meta ? meta.content : '',
   title: document.title,
