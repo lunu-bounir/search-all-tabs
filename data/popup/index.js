@@ -43,35 +43,40 @@ const index = tab => Promise.race([new Promise(resolve => chrome.tabs.executeScr
   allFrames: true,
   file: '/data/collect.js'
 }, arr => {
-  if (chrome.runtime.lastError) {
-    resolve(0);
-  }
-  else {
-    try {
-      arr = arr.filter(a => a && a.body.trim());
-      arr.forEach(o => {
-        o.lang = detectLanguage(o.lang);
-        o.title = o.title || tab.title;
-        xapian.add(o, {
-          tabId: tab.id,
-          windowId: tab.windowId,
-          favIconUrl: tab.favIconUrl,
-          frameId: o.frameId
-        });
+  try {
+    chrome.runtime.lastError;
+    arr = (arr || [{
+      body: '',
+      date: new Date(document.lastModified).toISOString().split('T')[0].replace(/-/g, ''),
+      description: '',
+      frameId: 0,
+      keywords: '',
+      lang: 'english',
+      mime: 'text/html',
+      title: tab.title,
+      url: tab.url
+    }]).filter(a => a);
+    arr.forEach(o => {
+      o.lang = detectLanguage(o.lang);
+      o.title = o.title || tab.title;
+      xapian.add(o, {
+        tabId: tab.id,
+        windowId: tab.windowId,
+        favIconUrl: tab.favIconUrl,
+        frameId: o.frameId
       });
-      resolve(arr.length);
-    }
-    catch (e) {
-      resolve(0);
-    }
+    });
+    resolve(arr.length);
+  }
+  catch (e) {
+    console.warn('document skipped', e);
+    resolve(0);
   }
 })), new Promise(resolve => setTimeout(() => resolve(0), 1000))]);
 
 document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs => {
   let ignored = 0;
-  docs = (await Promise.all(
-    tabs.map(tab => tab.discarded ? Promise.resolve(0) : index(tab))
-  )).reduce((p, c) => {
+  docs = (await Promise.all(tabs.map(tab => index(tab)))).reduce((p, c) => {
     if (c === 0) {
       ignored += 1;
     }
@@ -187,7 +192,7 @@ document.getElementById('search').addEventListener('input', e => {
         });
         // the HTML code that is returns from snippet is escaped
         // https://xapian.org/docs/apidoc/html/classXapian_1_1MSet.html#a6f834ac35fdcc58fcd5eb38fc7f320f1
-        clone.querySelector('p').innerHTML = snippet || 'no preview';
+        clone.querySelector('p').innerHTML = snippet || 'Preview is not supported for this entry';
 
         root.appendChild(clone);
       }
