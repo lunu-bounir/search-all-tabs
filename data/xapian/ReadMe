@@ -1,8 +1,8 @@
 Download Links
-  https://github.com/lunu-bounir/xapain.js/releases/tag/0.1.8
+  https://github.com/lunu-bounir/xapain.js/releases/tag/0.2.5
 
-  MD5 (xapian.js) = 77ab5ed7b7ae1d91f471fba931f942b7
-  MD5 (xapian.js.mem) = cb82c3d510a022fe7e3ebec208d3a8a8
+  MD5 (xapian_noexception_nowasm.js) = a7ee9b4a28c8a08cd0fda744dda01402
+  MD5 (xapian_noexception_nowasm.js.mem) = 554206138fd58570a02a364214d9f519
 
 Source code
   https://github.com/lunu-bounir/xapain.js/blob/master/xapian.cc
@@ -11,4 +11,7 @@ Build
   https://github.com/lunu-bounir/xapain.js/blob/master/.travis.yml
 
 Log
-  https://travis-ci.org/lunu-bounir/xapain.js/builds/476795350
+  https://travis-ci.org/github/lunu-bounir/xapain.js/builds/695368634
+
+
+

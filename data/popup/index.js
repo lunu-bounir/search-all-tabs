@@ -38,6 +38,9 @@ const detectLanguage = code => {
   })[code] || 'english';
 };
 
+// keep tabs
+let cache = {};
+
 const index = tab => {
   return Promise.race([new Promise(resolve => {
     chrome.tabs.executeScript(tab.id, {
@@ -59,28 +62,39 @@ const index = tab => {
         lang: 'english',
         mime: 'text/html',
         title: tab.title,
-        url: tab.url
-      }]).filter(a => a);
+        url: tab.url,
+        top: true
+      }]).filter(a => a && a.title || a.body);
       arr.forEach(o => {
         o.lang = detectLanguage(o.lang);
-        o.title = o.title || tab.title;
+        o.title = o.title || tab.title || cache[tab.id].title;
+        if (o.title) {
+          cache[tab.id].title = o.title;
+        }
+        const favIconUrl = tab.favIconUrl || o.favIconUrl || cache[tab.id].favIconUrl;
+        if (favIconUrl) {
+          cache[tab.id].favIconUrl = o.title;
+        }
         xapian.add(o, {
           tabId: tab.id,
           windowId: tab.windowId,
-          favIconUrl: tab.favIconUrl,
-          frameId: o.frameId
+          favIconUrl: favIconUrl || 'web.svg',
+          frameId: o.frameId,
+          top: o.top
         });
       });
       return arr.length;
     }
     catch (e) {
-      console.error('document skipped', e);
+      console.warn('document skipped', e);
       return 0;
     }
   });
 };
 
 document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs => {
+  tabs.forEach(tab => cache[tab.id] = tab);
+
   let ignored = 0;
   docs = (await Promise.all(tabs.map(tab => index(tab)))).reduce((p, c) => {
     if (c === 0) {
@@ -92,9 +106,9 @@ document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs
     root.dataset.empty = 'Nothing to index. You need to have some tabs open.';
   }
   else {
-    root.dataset.empty = `Searching among ${docs} document(s)`;
+    root.dataset.empty = `Searching among ${docs} document${docs === 1 ? '' : 's'}`;
     if (ignored) {
-      root.dataset.empty += `. ${ignored} tab(s) are ignored`;
+      root.dataset.empty += `. ${ignored} tab${ignored === 1 ? ' is' : 's are'} ignored.`;
     }
   }
   ready = true;
@@ -115,13 +129,14 @@ document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs
         chrome.tabs.executeScript({
           code: 'window.getSelection().toString()',
           runAt: 'document_start'
-        }, arr => {
+        }, (arr = []) => {
           if (chrome.runtime.lastError || input.value) {
             return;
           }
           const query = arr.reduce((p, c) => p || c, '');
           if (query) {
             input.value = query;
+            input.select();
             input.dispatchEvent(new Event('input', {
               bubbles: true
             }));
@@ -130,6 +145,7 @@ document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs
       }
       else if (prefs.mode === 'history' && prefs.query) {
         input.value = prefs.query;
+        input.select();
         input.dispatchEvent(new Event('input', {
           bubbles: true
         }));
@@ -180,7 +196,10 @@ document.getElementById('search').addEventListener('input', e => {
         clone.querySelector('cite').textContent = obj.url;
         clone.querySelector('h2 span[data-id="number"]').textContent = '#' + (index + 1);
         clone.querySelector('h2 span[data-id="title"]').textContent = obj.title;
-        clone.querySelector('h2 img').src = obj.favIconUrl || 'chrome://favicon/' + obj.url;
+        clone.querySelector('h2 img').src = obj.favIconUrl || cache[obj.tabId].favIconUrl || 'chrome://favicon/' + obj.url;
+        if (!obj.top) {
+          clone.querySelector('h2 span[data-id="type"]').textContent = 'iframe';
+        }
         const code = clone.querySelector('h2 code');
         const percent = xapian.search.percent(index);
         code.textContent = percent + '%';
@@ -226,7 +245,7 @@ document.addEventListener('click', e => {
         windowId: Number(windowId),
         frameId,
         snippet
-      });
+      }, () => window.close());
       e.preventDefault();
     }
     else if (cmd === 'faqs') {
@@ -241,17 +260,53 @@ document.addEventListener('click', e => {
 window.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey) {
     if (e.code && e.code.startsWith('Digit')) {
+      e.preventDefault();
       const index = Number(e.code.replace('Digit', ''));
       const a = document.querySelector(`a[data-index="${index - 1}"]`);
       if (a) {
         a.click();
       }
     }
+    else if (e.code === 'KeyD') {
+      e.preventDefault();
+      const links = [...document.querySelectorAll('[data-tab-id]')]
+        .map(a => a.href)
+        .filter((s, i, l) => l.indexOf(s) === i);
+
+      if (links.length) {
+        chrome.permissions.request({
+          permissions: ['clipboardWrite']
+        }, () => {
+          navigator.clipboard.writeText(links.join('\n')).catch(e => {
+            console.warn(e);
+            if (e) {
+              alert(links.join('\n'));
+            }
+          });
+        });
+      }
+    }
   }
   else if (e.code === 'Escape' && e.target.value === '') {
     window.close();
   }
+  // extract all tabs into a new window
+  else if (e.code === 'Enter' && e.shiftKey) {
+    e.preventDefault();
+    const ids = [...document.querySelectorAll('[data-tab-id]')]
+      .map(a => a.dataset.tabId)
+      .filter((s, i, l) => l.indexOf(s) === i)
+      .map(Number);
+    if (ids.length) {
+      chrome.runtime.sendMessage({
+        method: 'group',
+        ids
+      });
+      window.close();
+    }
+  }
   else if (e.code === 'Enter') {
+    e.preventDefault();
     // fire Ctrl + 1
     window.dispatchEvent(new KeyboardEvent('keydown', {
       code: 'Digit1',
@@ -260,14 +315,48 @@ window.addEventListener('keydown', e => {
   }
 });
 
-// loading resources
-{
-  const api = document.createElement('script');
-  api.src = '../xapian.js';
-  api.onload = () => {
-    const core = document.createElement('script');
-    core.src = '../xapian/xapian.js';
-    document.body.appendChild(core);
-  };
-  document.body.appendChild(api);
-}
+// guide
+chrome.storage.local.get({
+  'guide': true
+}, prefs => {
+  if (prefs.guide) {
+    document.getElementById('guide').classList.remove('hidden');
+  }
+});
+document.getElementById('guide-close').addEventListener('click', e => {
+  e.target.parentElement.classList.add('hidden');
+  chrome.storage.local.set({
+    'guide': false
+  });
+});
+
+// permit
+chrome.storage.local.get({
+  'internal': true
+}, prefs => {
+  if (prefs.internal) {
+    chrome.permissions.contains({
+      permissions: ['tabs']
+    }, granted => {
+      if (granted === false) {
+        document.getElementById('internal').classList.remove('hidden');
+      }
+    });
+  }
+});
+document.getElementById('internal-close').addEventListener('click', e => {
+  e.target.parentElement.classList.add('hidden');
+  chrome.storage.local.set({
+    'internal': false
+  });
+});
+document.getElementById('internal').addEventListener('submit', e => {
+  e.preventDefault();
+  chrome.permissions.request({
+    permissions: ['tabs']
+  }, granted => {
+    if (granted) {
+      e.target.classList.add('hidden');
+    }
+  });
+});

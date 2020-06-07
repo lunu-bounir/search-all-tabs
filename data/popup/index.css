@@ -21,6 +21,10 @@ h2 {
   font-weight: 400;
   margin: 0;
 }
+code {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 1px 2px;
+}
 
 #faqs {
   position: absolute;
@@ -52,7 +56,7 @@ h2 {
   outline: none;
 }
 #search button[type=submit] {
-  fill: #3E85F4;
+  fill: #3e85f4;
   height: 28px;
   width: 28px;
   padding: 0 10px;
@@ -130,6 +134,7 @@ h2 {
   width: 16px;
   margin-right: 5px;
 }
+.result h2 span[data-id="type"],
 .result h2 span[data-id="number"],
 .result h2 code {
   margin-left: 10px;
@@ -142,7 +147,52 @@ h2 {
 .result h2 code {
   min-width: 32px;
 }
+.result h2 span[data-id="type"]:empty {
+  display: none;
+}
+.result h2 span[data-id="type"] {
+  background-color: #658a98;
+}
 .result h2 span[data-id="number"] {
   min-width: 20px;
   background-color: gray;
+}
+#internal,
+#guide {
+  background-color: #f6fff5;
+  border: solid 1px #dadada;
+  border-left: none;
+  border-right: none;
+  margin-bottom: 10px;
+  position: relative;
+  padding: 10px;
+}
+#internal-close,
+#guide-close {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  font-size: 20px;
+  cursor: pointer;
+}
+#guide ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+#guide li:not(:last-child) {
+  margin-bottom: 5px;
+}
+#internal {
+  display: grid;
+  grid-template-columns: 1fr min-content;
+  align-items: center;
+}
+#internal input[type=submit] {
+  float: right;
+  margin-right: 30px;
+  cursor: pointer;
+}
+.hidden {
+  display: none !important;
 }

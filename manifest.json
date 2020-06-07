@@ -1,6 +1,6 @@
 {
   "manifest_version": 2,
-  "version": "0.1.6",
+  "version": "0.1.7",
   "name": "Search all Tabs",
   "description": "A powerful offline indexing and searching tool to find matching terms in tab's title and content",
 
@@ -17,9 +17,12 @@
   "homepage_url": "https://add0n.com/search-all-tabs.html",
   "permissions": [
     "<all_urls>",
-    "tabs",
     "storage",
     "contextMenus"
+  ],
+  "optional_permissions": [
+    "tabs",
+    "clipboardWrite"
   ],
   "browser_action": {
     "default_popup": "data/popup/index.html",

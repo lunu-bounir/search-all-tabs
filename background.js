@@ -19,12 +19,27 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
         allFrames: true
       }, () => chrome.runtime.lastError);
     }
+    response();
   }
   else if (request.method === 'get') {
     response(cache[sender.tab.id]);
     cache[sender.tab.id];
   }
+  else if (request.method === 'group') {
+    const tabId = request.ids.shift();
+    chrome.windows.create({
+      tabId
+    }, w => {
+      if (request.ids.length) {
+        chrome.tabs.move(request.ids, {
+          windowId: w.id,
+          index: -1
+        });
+      }
+    });
+  }
 });
+
 // Contextmenu
 {
   const startup = () => chrome.storage.local.get({
@@ -59,29 +74,29 @@ chrome.contextMenus.onClicked.addListener(info => chrome.storage.local.set({
   mode: info.menuItemId.replace('mode:', '')
 }));
 
-// FAQs and Feedback
+/* FAQs & Feedback */
 {
-  const {onInstalled, setUninstallURL, getManifest} = chrome.runtime;
-  const {name, version} = getManifest();
-  const page = getManifest().homepage_url;
-  onInstalled.addListener(({reason, previousVersion}) => {
-    chrome.storage.local.get({
-      'faqs': true,
-      'last-update': 0
-    }, prefs => {
-      if (reason === 'install' || (prefs.faqs && reason === 'update')) {
-        const doUpdate = (Date.now() - prefs['last-update']) / 1000 / 60 / 60 / 24 > 45;
-        if (doUpdate && previousVersion !== version) {
-          chrome.tabs.create({
-            url: page + '?version=' + version +
-              (previousVersion ? '&p=' + previousVersion : '') +
-              '&type=' + reason,
-            active: reason === 'install'
-          });
-          chrome.storage.local.set({'last-update': Date.now()});
+  const {management, runtime: {onInstalled, setUninstallURL, getManifest}, storage, tabs} = chrome;
+  if (navigator.webdriver !== true) {
+    const page = getManifest().homepage_url;
+    const {name, version} = getManifest();
+    onInstalled.addListener(({reason, previousVersion}) => {
+      management.getSelf(({installType}) => installType === 'normal' && storage.local.get({
+        'faqs': true,
+        'last-update': 0
+      }, prefs => {
+        if (reason === 'install' || (prefs.faqs && reason === 'update')) {
+          const doUpdate = (Date.now() - prefs['last-update']) / 1000 / 60 / 60 / 24 > 45;
+          if (doUpdate && previousVersion !== version) {
+            tabs.create({
+              url: page + '?version=' + version + (previousVersion ? '&p=' + previousVersion : '') + '&type=' + reason,
+              active: reason === 'install'
+            });
+            storage.local.set({'last-update': Date.now()});
+          }
         }
-      }
+      }));
     });
-  });
-  setUninstallURL(page + '?rd=feedback&name=' + encodeURIComponent(name) + '&version=' + version);
+    setUninstallURL(page + '?rd=feedback&name=' + encodeURIComponent(name) + '&version=' + version);
+  }
 }
