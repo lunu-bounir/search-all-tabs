@@ -274,15 +274,11 @@ window.addEventListener('keydown', e => {
         .filter((s, i, l) => l.indexOf(s) === i);
 
       if (links.length) {
-        chrome.permissions.request({
-          permissions: ['clipboardWrite']
-        }, () => {
-          navigator.clipboard.writeText(links.join('\n')).catch(e => {
-            console.warn(e);
-            if (e) {
-              alert(links.join('\n'));
-            }
-          });
+        navigator.clipboard.writeText(links.join('\n')).catch(e => {
+          console.warn(e);
+          if (e) {
+            alert(links.join('\n'));
+          }
         });
       }
     }
