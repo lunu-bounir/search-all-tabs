@@ -38,8 +38,24 @@ const detectLanguage = code => {
   })[code] || 'english';
 };
 
+let aid;
+const arrange = () => {
+  clearTimeout(aid);
+  aid = setTimeout(arrange.do, 100);
+};
+arrange.do = () => {
+  const es = [...document.querySelectorAll('.result')];
+  const vs = es.filter(e => e.getBoundingClientRect().y > 5);
+  es.forEach((e, c) => {
+    const n = e.querySelector('[data-id="number"]');
+    const v = vs.length - es.length + c + 1;
+    n.textContent = '#' + v;
+    n.dataset.count = v;
+  });
+};
+
 // keep tabs
-let cache = {};
+const cache = {};
 
 const index = tab => {
   return Promise.race([new Promise(resolve => {
@@ -219,6 +235,11 @@ document.getElementById('search').addEventListener('input', e => {
         // https://xapian.org/docs/apidoc/html/classXapian_1_1MSet.html#a6f834ac35fdcc58fcd5eb38fc7f320f1
         clone.querySelector('p').innerHTML = snippet;
 
+        // intersection observer
+        new IntersectionObserver(arrange, {
+          threshold: 1.0
+        }).observe(clone.querySelector('h2'));
+
         root.appendChild(clone);
       }
     });
@@ -262,9 +283,9 @@ window.addEventListener('keydown', e => {
     if (e.code && e.code.startsWith('Digit')) {
       e.preventDefault();
       const index = Number(e.code.replace('Digit', ''));
-      const a = document.querySelector(`a[data-index="${index - 1}"]`);
-      if (a) {
-        a.click();
+      const n = document.querySelector(`[data-count="${index}"]`);
+      if (n) {
+        n.click();
       }
     }
     else if (e.code === 'KeyD') {
@@ -308,6 +329,28 @@ window.addEventListener('keydown', e => {
       code: 'Digit1',
       ctrlKey: true
     }));
+  }
+  else if (e.code === 'ArrowDown') {
+    e.preventDefault();
+    const div = [...document.querySelectorAll('.result')].filter(e => {
+      return e.getBoundingClientRect().top > document.documentElement.clientHeight;
+    }).shift();
+    if (div) {
+      div.scrollIntoView({
+        block: 'end'
+      });
+    }
+  }
+  else if (e.code === 'ArrowUp') {
+    e.preventDefault();
+    const div = [...document.querySelectorAll('.result')].filter(e => {
+      return e.getBoundingClientRect().bottom < 0;
+    }).pop();
+    if (div) {
+      div.scrollIntoView({
+        block: 'start'
+      });
+    }
   }
 });
 
