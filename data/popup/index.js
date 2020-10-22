@@ -57,7 +57,7 @@ arrange.do = () => {
 // keep tabs
 const cache = {};
 
-const index = tab => {
+const index = (tab, scope = 'both') => {
   return Promise.race([new Promise(resolve => {
     chrome.tabs.executeScript(tab.id, {
       runAt: 'document_start',
@@ -81,6 +81,7 @@ const index = tab => {
         url: tab.url,
         top: true
       }]).filter(a => a && a.title || a.body);
+
       arr.forEach(o => {
         o.lang = detectLanguage(o.lang);
         o.title = o.title || tab.title || cache[tab.id].title;
@@ -90,6 +91,12 @@ const index = tab => {
         const favIconUrl = tab.favIconUrl || o.favIconUrl || cache[tab.id].favIconUrl;
         if (favIconUrl) {
           cache[tab.id].favIconUrl = o.title;
+        }
+        if (scope === 'body') {
+          o.title = '';
+        }
+        else if (scope === 'title') {
+          o.body = '';
         }
         xapian.add(o, {
           tabId: tab.id,
@@ -111,8 +118,12 @@ const index = tab => {
 document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs => {
   tabs.forEach(tab => cache[tab.id] = tab);
 
+  const scope = await (new Promise(resolve => chrome.storage.local.get({
+    scope: 'both'
+  }, prefs => resolve(prefs.scope))));
+
   let ignored = 0;
-  docs = (await Promise.all(tabs.map(tab => index(tab)))).reduce((p, c) => {
+  docs = (await Promise.all(tabs.map(tab => index(tab, scope)))).reduce((p, c) => {
     if (c === 0) {
       ignored += 1;
     }
@@ -137,7 +148,7 @@ document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs
   }
   else {
     chrome.storage.local.get({
-      mode: 'selected',
+      mode: 'none',
       query: ''
     }, prefs => {
       if (prefs.mode === 'selected') {

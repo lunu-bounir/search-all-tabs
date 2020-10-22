@@ -47,34 +47,74 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
 // Contextmenu
 {
   const startup = () => chrome.storage.local.get({
-    mode: 'selected',
+    mode: 'none',
+    scope: 'both',
     strict: false
   }, prefs => {
     chrome.contextMenus.create({
+      id: 'automatic-search',
+      title: 'Search for',
+      contexts: ['browser_action']
+    });
+    chrome.contextMenus.create({
       type: 'radio',
       id: 'mode:selected',
-      title: 'Automatically Search the Selected Text',
+      title: 'Selected Text',
       contexts: ['browser_action'],
-      checked: prefs.mode === 'selected'
+      checked: prefs.mode === 'selected',
+      parentId: 'automatic-search'
     });
     chrome.contextMenus.create({
       type: 'radio',
       id: 'mode:history',
-      title: 'Automatically Search the last Query',
+      title: 'The last Query',
       contexts: ['browser_action'],
-      checked: prefs.mode === 'history'
+      checked: prefs.mode === 'history',
+      parentId: 'automatic-search'
     });
     chrome.contextMenus.create({
       type: 'radio',
       id: 'mode:none',
-      title: 'Turn off Automatic Seach',
+      title: 'Turn off Automatic Search',
       contexts: ['browser_action'],
-      checked: prefs.mode === 'none'
+      checked: prefs.mode === 'none',
+      parentId: 'automatic-search'
     });
+
+    chrome.contextMenus.create({
+      id: 'search-scope',
+      title: 'Search Scope',
+      contexts: ['browser_action']
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'scope:title',
+      title: 'Only index page title',
+      contexts: ['browser_action'],
+      checked: prefs.scope === 'title',
+      parentId: 'search-scope'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'scope:body',
+      title: 'Only index page content',
+      contexts: ['browser_action'],
+      checked: prefs.scope === 'body',
+      parentId: 'search-scope'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'scope:both',
+      title: 'Index both page body and title',
+      contexts: ['browser_action'],
+      checked: prefs.scope === 'both',
+      parentId: 'search-scope'
+    });
+
     chrome.contextMenus.create({
       type: 'checkbox',
       id: 'strict',
-      title: 'Strictly try to scroll to the result',
+      title: 'Always try to scroll to a matching result',
       contexts: ['browser_action'],
       checked: prefs.strict
     });
@@ -86,6 +126,11 @@ chrome.contextMenus.onClicked.addListener(info => {
   if (info.menuItemId === 'strict') {
     chrome.storage.local.set({
       strict: info.checked
+    });
+  }
+  else if (info.menuItemId.startsWith('scope:')) {
+    chrome.storage.local.set({
+      scope: info.menuItemId.replace('scope:', '')
     });
   }
   else {
