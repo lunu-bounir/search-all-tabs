@@ -11,15 +11,19 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
     chrome.windows.update(request.windowId, {
       focused: true
     });
-    if (request.snippet) {
-      cache[request.tabId] = request;
-      chrome.tabs.executeScript(request.tabId, {
-        file: 'data/highlight.js',
-        runAt: 'document_start',
-        allFrames: true
-      }, () => chrome.runtime.lastError);
-    }
-    response();
+    chrome.storage.local.get({
+      strict: false
+    }, prefs => {
+      if (request.snippet && (request.snippet.indexOf('<b>') !== -1 || prefs.strict)) {
+        cache[request.tabId] = request;
+        chrome.tabs.executeScript(request.tabId, {
+          file: 'data/highlight.js',
+          runAt: 'document_start',
+          allFrames: true
+        }, () => chrome.runtime.lastError);
+      }
+      response();
+    });
   }
   else if (request.method === 'get') {
     response(cache[sender.tab.id]);
@@ -43,7 +47,8 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
 // Contextmenu
 {
   const startup = () => chrome.storage.local.get({
-    mode: 'selected'
+    mode: 'selected',
+    strict: false
   }, prefs => {
     chrome.contextMenus.create({
       type: 'radio',
@@ -66,13 +71,29 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
       contexts: ['browser_action'],
       checked: prefs.mode === 'none'
     });
+    chrome.contextMenus.create({
+      type: 'checkbox',
+      id: 'strict',
+      title: 'Strictly try to scroll to the result',
+      contexts: ['browser_action'],
+      checked: prefs.strict
+    });
   });
   chrome.runtime.onStartup.addListener(startup);
   chrome.runtime.onInstalled.addListener(startup);
 }
-chrome.contextMenus.onClicked.addListener(info => chrome.storage.local.set({
-  mode: info.menuItemId.replace('mode:', '')
-}));
+chrome.contextMenus.onClicked.addListener(info => {
+  if (info.menuItemId === 'strict') {
+    chrome.storage.local.set({
+      strict: info.checked
+    });
+  }
+  else {
+    chrome.storage.local.set({
+      mode: info.menuItemId.replace('mode:', '')
+    });
+  }
+});
 
 /* FAQs & Feedback */
 {
