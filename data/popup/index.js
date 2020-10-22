@@ -80,7 +80,7 @@ const index = (tab, scope = 'both') => {
         title: tab.title,
         url: tab.url,
         top: true
-      }]).filter(a => a && a.title || a.body);
+      }]).filter(a => a && (a.title || a.body));
 
       arr.forEach(o => {
         o.lang = detectLanguage(o.lang);
