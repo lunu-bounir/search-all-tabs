@@ -1,3 +1,37 @@
+:root {
+  --bg-color: #fdfdfd;
+  --code-bg: rgba(0, 0, 0, 0.05);
+  --search: #4d5156;
+  --search-bg: #fff;
+  --search-border: #dfe1e5;
+  --search-border-active: rgba(223, 225, 229, 0);
+  --search-fill: #3e85f4;
+  --info-bg: #808080;
+  --empty-results: #808080;
+  --empty-results-border: #eee;
+  --result-cite: #006621;
+  --result-span: #fff;
+  --result-p: #4d5156;
+  --result-type-bg: #658a98;
+  --guide-bg: #f6fff5;
+  --guide-border: #dadada;
+  --a: #1a0dab;
+  --a-visited: #609;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #35363a;
+    --search: #f0f3f4;
+    --search-bg: #202124;
+    --search-border: #6e6f72;
+    --result-cite: #00902f;
+    --result-p: #b1b1b1;
+    --a: #4389e2;
+    --a-visited: #925cd6;
+    --result-type-bg: #3c5863;
+  }
+}
+
 body {
   width: 700px;
   display: flex;
@@ -5,7 +39,7 @@ body {
   margin: 0;
   font-family: "Helvetica Neue", Helvetica, sans-serif;
   font-size: 13px;
-  background-color: #f7f7f7;
+  background-color: var(--bg-color);
 }
 header {
   display: flex;
@@ -16,13 +50,17 @@ header {
 }
 a {
   text-decoration: none;
+  color: var(--a);
+}
+a:visited {
+  color: var(--a-visited);
 }
 h2 {
   font-weight: 400;
   margin: 0;
 }
 code {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: var(--code-bg);
   padding: 1px 2px;
 }
 
@@ -37,16 +75,17 @@ code {
 #search {
   display: flex;
   align-items: center;
-  border: 1px solid #dfe1e5;
+  border: 1px solid var(--search-border);
   height: 44px;
   width: 500px;
   border-radius: 24px;
   overflow: hidden;
-  background-color: #fff;
+  color: var(--search);
+  background-color: var(--search-bg);
 }
 #search:hover {
   box-shadow: 0 1px 6px 0 rgba(32, 33, 36, 0.28);
-  border-color: rgba(223, 225, 229, 0);
+  border-color: var(--search-border-active);
 }
 #search input[type=search] {
   border-radius: 0;
@@ -56,7 +95,7 @@ code {
   outline: none;
 }
 #search button[type=submit] {
-  fill: #3e85f4;
+  fill: var(--search-fill);
   height: 28px;
   width: 28px;
   padding: 0 10px;
@@ -67,7 +106,7 @@ code {
 }
 #info {
   font-size: small;
-  color: #808080;
+  color: var(--info-bg);
   padding: 0 30px;
   display: flex;
   justify-content: flex-end;
@@ -78,7 +117,7 @@ code {
   flex: 1;
 }
 #results:not(:empty) {
-  border-top: solid 1px #eee;
+  border-top: solid 1px var(--empty-results-border);
 }
 #results:empty::before,
 #results[data-size="0"]::before {
@@ -87,7 +126,7 @@ code {
   height: 100%;
   align-items: center;
   justify-content: center;
-  color: #808080;
+  color: var(--empty-results);
 }
 #results:empty::before {
   content: attr(data-empty);
@@ -116,7 +155,7 @@ code {
   text-overflow: ellipsis;
 }
 .result a cite {
-  color: #006621;
+  color: var(--result-cite);
   font-style: normal;
   white-space: nowrap;
   overflow: hidden;
@@ -126,6 +165,7 @@ code {
 }
 .result p {
   margin: 0;
+  color: var(--result-p)
 }
 .result p:empty::before {
   content: 'Preview is not supported for this entry';
@@ -138,7 +178,7 @@ code {
 .result h2 span[data-id="number"],
 .result h2 code {
   margin-left: 10px;
-  color: #fff;
+  color: var(--result-span);
   padding: 1px 5px;
   font-size: 11px;
   font-family: arial, sans-serif;
@@ -151,7 +191,7 @@ code {
   display: none;
 }
 .result h2 span[data-id="type"] {
-  background-color: #658a98;
+  background-color: var(--result-type-bg);
 }
 .result h2 span[data-id="number"] {
   min-width: 20px;
@@ -159,8 +199,8 @@ code {
 }
 #internal,
 #guide {
-  background-color: #f6fff5;
-  border: solid 1px #dadada;
+  background-color: var(--guide-bg);
+  border: solid 1px var(--guide-border);
   border-left: none;
   border-right: none;
   margin-bottom: 10px;
