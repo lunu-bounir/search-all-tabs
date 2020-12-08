@@ -44,6 +44,9 @@ body {
   font-size: 13px;
   background-color: var(--bg-color);
 }
+body[data-mode=sidebar] {
+  width: 100%;
+}
 header {
   display: flex;
   justify-content: center;
@@ -75,6 +78,11 @@ code {
   display: flex;
   align-items: center;
 }
+@media screen and (max-width: 500px)  {
+  #faqs {
+    display: none;
+  }
+}
 #search {
   display: flex;
   align-items: center;
@@ -85,6 +93,12 @@ code {
   overflow: hidden;
   color: var(--search);
   background-color: var(--search-bg);
+}
+@media screen and (max-width: 500px)  {
+  #search {
+    border: none;
+    border-radius: 0;
+  }
 }
 #search:hover {
   box-shadow: 0 1px 6px 0 rgba(32, 33, 36, 0.28);
@@ -101,6 +115,7 @@ code {
   fill: var(--search-fill);
   height: 28px;
   width: 28px;
+  min-width: 18px;
   padding: 0 10px;
   box-sizing: content-box;
   background-color: transparent;
@@ -125,7 +140,8 @@ code {
 #results:empty::before,
 #results[data-size="0"]::before {
   display: flex;
-  width: 100%;
+  width: calc(100% - 30px);
+  padding: 0 15px;
   height: 100%;
   align-items: center;
   justify-content: center;

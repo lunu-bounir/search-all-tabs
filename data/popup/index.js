@@ -1,6 +1,11 @@
 /* globals xapian */
 'use strict';
 
+const args = new URLSearchParams(location.search);
+if (args.get('mode') === 'sidebar') {
+  document.body.dataset.mode = 'sidebar';
+}
+
 let ready = false;
 let docs = 0;
 
@@ -222,7 +227,7 @@ document.getElementById('search').addEventListener('input', e => {
         });
         clone.querySelector('cite').textContent = obj.url;
         clone.querySelector('h2 span[data-id="number"]').textContent = '#' + (index + 1);
-        clone.querySelector('h2 span[data-id="title"]').textContent = obj.title;
+        clone.querySelector('h2').title = clone.querySelector('h2 span[data-id="title"]').textContent = obj.title;
         clone.querySelector('h2 img').src = obj.favIconUrl || cache[obj.tabId].favIconUrl || 'chrome://favicon/' + obj.url;
         clone.querySelector('h2 img').onerror = e => {
           e.target.src = 'web.svg';

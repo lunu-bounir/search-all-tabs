@@ -52,5 +52,8 @@
   },
   "commands": {
     "_execute_browser_action": {}
+  },
+  "sidebar_action": {
+    "default_panel": "data/popup/index.html?mode=sidebar"
   }
 }
