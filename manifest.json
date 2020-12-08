@@ -2,7 +2,8 @@
   "manifest_version": 2,
   "version": "0.2.0",
   "name": "Search all Tabs",
-  "description": "A powerful offline indexing and searching tool to find matching terms in tab's title and content",
+  "description": "__MSG_description__",
+  "default_locale": "en",
 
   "icons": {
      "16": "data/icons/16.png",

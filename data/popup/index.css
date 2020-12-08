@@ -17,6 +17,7 @@
   --guide-border: #dadada;
   --a: #1a0dab;
   --a-visited: #609;
+  --img-bg: #fff;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -27,8 +28,10 @@
     --result-cite: #00902f;
     --result-p: #b1b1b1;
     --a: #4389e2;
-    --a-visited: #925cd6;
+    --a-visited: #c1768a;
     --result-type-bg: #3c5863;
+    --guide-bg: #aeb9ac;
+    --guide-border: #6e6f72;
   }
 }
 
@@ -173,6 +176,7 @@ code {
 .result img {
   width: 16px;
   margin-right: 5px;
+  background-color: var(--img-bg)
 }
 .result h2 span[data-id="type"],
 .result h2 span[data-id="number"],
