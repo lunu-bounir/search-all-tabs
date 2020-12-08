@@ -224,6 +224,9 @@ document.getElementById('search').addEventListener('input', e => {
         clone.querySelector('h2 span[data-id="number"]').textContent = '#' + (index + 1);
         clone.querySelector('h2 span[data-id="title"]').textContent = obj.title;
         clone.querySelector('h2 img').src = obj.favIconUrl || cache[obj.tabId].favIconUrl || 'chrome://favicon/' + obj.url;
+        clone.querySelector('h2 img').onerror = e => {
+          e.target.src = 'web.svg';
+        };
         if (!obj.top) {
           clone.querySelector('h2 span[data-id="type"]').textContent = 'iframe';
         }
