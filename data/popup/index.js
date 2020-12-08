@@ -298,6 +298,11 @@ document.addEventListener('click', e => {
 
 // keyboard shortcut
 window.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.code === 'KeyR') {
+    location.reload();
+    e.stopPropagation();
+    e.preventDefault();
+  }
   if (e.metaKey || e.ctrlKey) {
     if (e.code && e.code.startsWith('Digit')) {
       e.preventDefault();
