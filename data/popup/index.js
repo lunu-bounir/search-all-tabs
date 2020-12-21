@@ -1,4 +1,4 @@
-/* globals xapian */
+/* globals engine */
 'use strict';
 
 const args = new URLSearchParams(location.search);
@@ -8,40 +8,6 @@ if (args.get('mode') === 'sidebar') {
 
 let ready = false;
 let docs = 0;
-
-const detectLanguage = code => {
-  code = code.split('-')[0];
-
-  return ({
-    'ar': 'arabic',
-    'fa': 'arabic',
-    'hy': 'armenian',
-    'eu': 'basque',
-    'ca': 'catalan',
-    'da': 'danish',
-    'nl': 'dutch',
-    'en': 'english',
-    'fi': 'finnish',
-    'fr': 'french',
-    'de': 'german',
-    'hu': 'hungarian',
-    'id': 'indonesian',
-    'ga': 'irish',
-    'it': 'italian',
-    'lt': 'lithuanian',
-    'ne': 'nepali',
-    'no': 'norwegian',
-    'nn': 'norwegian',
-    'nb': 'norwegian',
-    'pt': 'portuguese',
-    'ro': 'romanian',
-    'ru': 'russian',
-    'es': 'spanish',
-    'sv': 'swedish',
-    'ta': 'tamil',
-    'tr': 'turkish'
-  })[code] || 'english';
-};
 
 let aid;
 const arrange = () => {
@@ -88,7 +54,7 @@ const index = (tab, scope = 'both') => {
       }]).filter(a => a && (a.title || a.body));
 
       arr.forEach(o => {
-        o.lang = detectLanguage(o.lang);
+        o.lang = engine.language(o.lang);
         o.title = o.title || tab.title || cache[tab.id].title;
         if (o.title) {
           cache[tab.id].title = o.title;
@@ -103,7 +69,7 @@ const index = (tab, scope = 'both') => {
         else if (scope === 'title') {
           o.body = '';
         }
-        xapian.add(o, {
+        engine.add(o, {
           tabId: tab.id,
           windowId: tab.windowId,
           favIconUrl: favIconUrl || 'web.svg',
@@ -120,7 +86,7 @@ const index = (tab, scope = 'both') => {
   });
 };
 
-document.addEventListener('xapian-ready', () => chrome.tabs.query({}, async tabs => {
+document.addEventListener('engine-ready', () => chrome.tabs.query({}, async tabs => {
   tabs.forEach(tab => cache[tab.id] = tab);
 
   const scope = await (new Promise(resolve => chrome.storage.local.get({
@@ -199,67 +165,74 @@ document.getElementById('search').addEventListener('input', e => {
     const start = Date.now();
     // detect input language
     chrome.i18n.detectLanguage(query, async obj => {
-      const lang = detectLanguage(obj && obj.languages.length ? obj.languages[0].language : 'en');
+      const lang = engine.language(obj && obj.languages.length ? obj.languages[0].language : 'en');
 
-      const {size, estimated} = xapian.search({
-        query,
-        lang
-      });
-      root.dataset.size = size;
+      try {
+        const {size, estimated} = engine.search({
+          query,
+          lang
+        });
 
-      if (size === 0) {
-        info.textContent = '';
-        return;
+        root.dataset.size = size;
+
+        if (size === 0) {
+          info.textContent = '';
+          return;
+        }
+        info.textContent =
+          `About ${estimated} results (${((Date.now() - start) / 1000).toFixed(2)} seconds in ${docs} documents)`;
+
+        const t = document.getElementById('result');
+        for (let index = 0; index < size; index += 1) {
+          const obj = await engine.search.body(index);
+          const clone = document.importNode(t.content, true);
+          clone.querySelector('a').href = obj.url;
+          Object.assign(clone.querySelector('a').dataset, {
+            tabId: obj.tabId,
+            windowId: obj.windowId,
+            frameId: obj.frameId,
+            index
+          });
+          clone.querySelector('cite').textContent = obj.url;
+          clone.querySelector('h2 span[data-id="number"]').textContent = '#' + (index + 1);
+          clone.querySelector('h2').title = clone.querySelector('h2 span[data-id="title"]').textContent = obj.title;
+          clone.querySelector('h2 img').src = obj.favIconUrl || cache[obj.tabId].favIconUrl || 'chrome://favicon/' + obj.url;
+          clone.querySelector('h2 img').onerror = e => {
+            e.target.src = 'web.svg';
+          };
+          if (!obj.top) {
+            clone.querySelector('h2 span[data-id="type"]').textContent = 'iframe';
+          }
+          const code = clone.querySelector('h2 code');
+          const percent = engine.search.percent(index);
+          code.textContent = percent + '%';
+          if (percent > 80) {
+            code.style['background-color'] = 'green';
+          }
+          else if (code > 60) {
+            code.style['background-color'] = 'orange';
+          }
+          else {
+            code.style['background-color'] = 'gray';
+          }
+          const snippet = await engine.search.snippet({
+            index
+          });
+          // the HTML code that is returns from snippet is escaped
+          // https://xapian.org/docs/apidoc/html/classXapian_1_1MSet.html#a6f834ac35fdcc58fcd5eb38fc7f320f1
+          clone.querySelector('p').content = clone.querySelector('p').innerHTML = snippet;
+
+          // intersection observer
+          new IntersectionObserver(arrange, {
+            threshold: 1.0
+          }).observe(clone.querySelector('h2'));
+
+          root.appendChild(clone);
+        }
       }
-      info.textContent =
-        `About ${estimated} results (${((Date.now() - start) / 1000).toFixed(2)} seconds in ${docs} documents)`;
-
-      const t = document.getElementById('result');
-      for (let index = 0; index < size; index += 1) {
-        const obj = await xapian.search.body(index);
-        const clone = document.importNode(t.content, true);
-        clone.querySelector('a').href = obj.url;
-        Object.assign(clone.querySelector('a').dataset, {
-          tabId: obj.tabId,
-          windowId: obj.windowId,
-          frameId: obj.frameId,
-          index
-        });
-        clone.querySelector('cite').textContent = obj.url;
-        clone.querySelector('h2 span[data-id="number"]').textContent = '#' + (index + 1);
-        clone.querySelector('h2').title = clone.querySelector('h2 span[data-id="title"]').textContent = obj.title;
-        clone.querySelector('h2 img').src = obj.favIconUrl || cache[obj.tabId].favIconUrl || 'chrome://favicon/' + obj.url;
-        clone.querySelector('h2 img').onerror = e => {
-          e.target.src = 'web.svg';
-        };
-        if (!obj.top) {
-          clone.querySelector('h2 span[data-id="type"]').textContent = 'iframe';
-        }
-        const code = clone.querySelector('h2 code');
-        const percent = xapian.search.percent(index);
-        code.textContent = percent + '%';
-        if (percent > 80) {
-          code.style['background-color'] = 'green';
-        }
-        else if (code > 60) {
-          code.style['background-color'] = 'orange';
-        }
-        else {
-          code.style['background-color'] = 'gray';
-        }
-        const snippet = await xapian.search.snippet({
-          index
-        });
-        // the HTML code that is returns from snippet is escaped
-        // https://xapian.org/docs/apidoc/html/classXapian_1_1MSet.html#a6f834ac35fdcc58fcd5eb38fc7f320f1
-        clone.querySelector('p').innerHTML = snippet;
-
-        // intersection observer
-        new IntersectionObserver(arrange, {
-          threshold: 1.0
-        }).observe(clone.querySelector('h2'));
-
-        root.appendChild(clone);
+      catch (e) {
+        console.warn(e);
+        info.textContent = e.message || 'Unknown error occurred';
       }
     });
   }
@@ -278,7 +251,7 @@ document.addEventListener('click', e => {
 
     if (cmd === 'open') {
       const {tabId, windowId, frameId} = a.dataset;
-      const snippet = e.target.closest('.result').querySelector('p').innerHTML;
+      const snippet = e.target.closest('.result').querySelector('p').content;
       chrome.runtime.sendMessage({
         method: 'find',
         tabId: Number(tabId),
@@ -332,7 +305,7 @@ window.addEventListener('keydown', e => {
     window.close();
   }
   // extract all tabs into a new window
-  else if (e.code === 'Enter' && e.shiftKey) {
+  else if ((e.code === 'Enter' || e.code === 'NumpadEnter') && e.shiftKey) {
     e.preventDefault();
     const ids = [...document.querySelectorAll('[data-tab-id]')]
       .map(a => a.dataset.tabId)
@@ -346,7 +319,7 @@ window.addEventListener('keydown', e => {
       window.close();
     }
   }
-  else if (e.code === 'Enter') {
+  else if ((e.code === 'Enter' || e.code === 'NumpadEnter')) {
     e.preventDefault();
     // fire Ctrl + 1
     window.dispatchEvent(new KeyboardEvent('keydown', {
@@ -422,4 +395,14 @@ document.getElementById('internal').addEventListener('submit', e => {
       e.target.classList.add('hidden');
     }
   });
+});
+
+// select engine
+chrome.storage.local.get({
+  engine: 'xapian'
+}, prefs => {
+  const s = document.createElement('script');
+  s.src = '../' + prefs.engine + '/connect.js';
+  console.log('I am using', prefs.engine, 'engine');
+  document.body.appendChild(s);
 });

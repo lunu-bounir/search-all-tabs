@@ -6,6 +6,7 @@ chrome.runtime.sendMessage({
 }, ({snippet, frameId}) => {
   if (window.frameId && window.frameId + '' === frameId) {
     const simple = snippet.replace(/<\/?b>/g, '');
+    console.log(simple);
 
     if (window.find(simple, false, false, true) === false) {
       const sections = snippet.split('\n').map(a => a.trim()).filter(a => a && a.length > 5).sort((a, b) => {

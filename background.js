@@ -49,6 +49,7 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
   const startup = () => chrome.storage.local.get({
     mode: 'none',
     scope: 'both',
+    engine: 'xapian',
     strict: false
   }, prefs => {
     chrome.contextMenus.create({
@@ -112,6 +113,28 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
     });
 
     chrome.contextMenus.create({
+      id: 'search-engine',
+      title: 'Search Engine',
+      contexts: ['browser_action']
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'engine:lunr',
+      title: 'lunr.js',
+      contexts: ['browser_action'],
+      checked: prefs.engine === 'lunr',
+      parentId: 'search-engine'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'engine:xapian',
+      title: 'xapian.js',
+      contexts: ['browser_action'],
+      checked: prefs.engine === 'xapian',
+      parentId: 'search-engine'
+    });
+
+    chrome.contextMenus.create({
       type: 'checkbox',
       id: 'strict',
       title: 'Always try to scroll to a matching result',
@@ -131,6 +154,11 @@ chrome.contextMenus.onClicked.addListener(info => {
   else if (info.menuItemId.startsWith('scope:')) {
     chrome.storage.local.set({
       scope: info.menuItemId.replace('scope:', '')
+    });
+  }
+  else if (info.menuItemId.startsWith('engine:')) {
+    chrome.storage.local.set({
+      engine: info.menuItemId.replace('engine:', '')
     });
   }
   else {

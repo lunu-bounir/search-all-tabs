@@ -69,6 +69,9 @@ code {
   background-color: var(--code-bg);
   padding: 1px 2px;
 }
+b {
+  color: #948080;
+}
 
 #faqs {
   position: absolute;
