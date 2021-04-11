@@ -53,11 +53,12 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
     mode: 'none',
     scope: 'both',
     engine: 'xapian',
-    strict: false
+    strict: false,
+    duplicates: true
   }, prefs => {
     chrome.contextMenus.create({
       id: 'automatic-search',
-      title: 'Search for',
+      title: 'Auto Search',
       contexts: ['browser_action']
     });
     chrome.contextMenus.create({
@@ -138,20 +139,46 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
     });
 
     chrome.contextMenus.create({
+      id: 'options',
+      title: 'Options',
+      contexts: ['browser_action']
+    });
+
+    chrome.contextMenus.create({
       type: 'checkbox',
       id: 'strict',
-      title: 'Always try to scroll to a matching result',
+      title: 'Always Try to Scroll to a Matching Result',
       contexts: ['browser_action'],
-      checked: prefs.strict
+      checked: prefs.strict,
+      parentId: 'options'
+    });
+    chrome.contextMenus.create({
+      type: 'checkbox',
+      id: 'duplicates',
+      title: 'Ignore Duplicated Tabs',
+      contexts: ['browser_action'],
+      checked: prefs.duplicates,
+      parentId: 'options'
+    });
+
+    chrome.contextMenus.create({
+      id: 'preview',
+      title: 'How to Use',
+      contexts: ['browser_action']
     });
   });
   chrome.runtime.onStartup.addListener(startup);
   chrome.runtime.onInstalled.addListener(startup);
 }
 chrome.contextMenus.onClicked.addListener(info => {
-  if (info.menuItemId === 'strict') {
+  if (info.menuItemId === 'strict' || info.menuItemId === 'duplicates') {
     chrome.storage.local.set({
-      strict: info.checked
+      [info.menuItemId]: info.checked
+    });
+  }
+  else if (info.menuItemId === 'preview') {
+    chrome.tabs.create({
+      url: 'https://www.youtube.com/watch?v=ks0PDxFBrA0'
     });
   }
   else if (info.menuItemId.startsWith('scope:')) {
@@ -188,7 +215,7 @@ chrome.contextMenus.onClicked.addListener(info => {
             tabs.query({active: true, currentWindow: true}, tbs => tabs.create({
               url: page + '?version=' + version + (previousVersion ? '&p=' + previousVersion : '') + '&type=' + reason,
               active: reason === 'install',
-              index: tbs ? tbs[0].index + 1 : undefined
+              ...(tbs && tbs.length && {index: tbs[0].index + 1})
             }));
             storage.local.set({'last-update': Date.now()});
           }

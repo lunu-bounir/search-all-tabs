@@ -89,11 +89,26 @@ const index = (tab, scope = 'both') => {
 document.addEventListener('engine-ready', () => chrome.tabs.query({}, async tabs => {
   tabs.forEach(tab => cache[tab.id] = tab);
 
-  const scope = await (new Promise(resolve => chrome.storage.local.get({
-    scope: 'both'
-  }, prefs => resolve(prefs.scope))));
+  const {scope, duplicates} = await (new Promise(resolve => chrome.storage.local.get({
+    scope: 'both',
+    duplicates: true
+  }, prefs => resolve(prefs))));
 
   let ignored = 0;
+  console.log(duplicates);
+  if (duplicates) {
+    const list = new Set();
+    tabs = tabs.filter(t => {
+      if (list.has(t.url)) {
+        ignored += 1;
+        return false;
+      }
+      list.add(t.url);
+      return true;
+    });
+  }
+
+
   docs = (await Promise.all(tabs.map(tab => index(tab, scope)))).reduce((p, c) => {
     if (c === 0) {
       ignored += 1;
