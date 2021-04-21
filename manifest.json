@@ -51,7 +51,12 @@
     ]
   },
   "commands": {
-    "_execute_browser_action": {}
+    "_execute_browser_action": {
+      "description": "open the popup view button with a shortcut"
+    },
+    "_execute_sidebar_action": {
+      "description": "open the sidebar with a shortcut"
+    }
   },
   "sidebar_action": {
     "default_panel": "data/popup/index.html?mode=sidebar",
