@@ -1,6 +1,6 @@
 {
   "manifest_version": 2,
-  "version": "0.2.3",
+  "version": "0.2.4",
   "name": "Search all Tabs",
   "description": "__MSG_description__",
   "default_locale": "en",
@@ -60,6 +60,7 @@
   },
   "sidebar_action": {
     "default_panel": "data/popup/index.html?mode=sidebar",
-    "default_icon": "data/icons/64.png"
+    "default_icon": "data/icons/64.png",
+    "open_at_install": false
   }
 }

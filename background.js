@@ -50,11 +50,12 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
 // Contextmenu
 {
   const startup = () => chrome.storage.local.get({
-    mode: 'none',
-    scope: 'both',
-    engine: 'xapian',
-    strict: false,
-    duplicates: true
+    'mode': 'none',
+    'scope': 'both',
+    'engine': 'xapian',
+    'strict': false,
+    'duplicates': true,
+    'parse-pdf': true
   }, prefs => {
     chrome.contextMenus.create({
       id: 'automatic-search',
@@ -160,6 +161,14 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
       checked: prefs.duplicates,
       parentId: 'options'
     });
+    chrome.contextMenus.create({
+      type: 'checkbox',
+      id: 'parse-pdf',
+      title: 'Include PDF Files (parse with PDF.js)',
+      contexts: ['browser_action'],
+      checked: prefs['parse-pdf'],
+      parentId: 'options'
+    });
 
     chrome.contextMenus.create({
       id: 'preview',
@@ -171,7 +180,7 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
   chrome.runtime.onInstalled.addListener(startup);
 }
 chrome.contextMenus.onClicked.addListener(info => {
-  if (info.menuItemId === 'strict' || info.menuItemId === 'duplicates') {
+  if (info.menuItemId === 'strict' || info.menuItemId === 'duplicates' || info.menuItemId === 'parse-pdf') {
     chrome.storage.local.set({
       [info.menuItemId]: info.checked
     });

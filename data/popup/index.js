@@ -1,4 +1,4 @@
-/* globals engine */
+/* globals engine, pdfjsLib */
 'use strict';
 
 const args = new URLSearchParams(location.search);
@@ -28,7 +28,7 @@ arrange.do = () => {
 // keep tabs
 const cache = {};
 
-const index = (tab, scope = 'both') => {
+const index = (tab, scope = 'both', options = {}) => {
   return Promise.race([new Promise(resolve => {
     chrome.tabs.executeScript(tab.id, {
       runAt: 'document_start',
@@ -36,10 +36,6 @@ const index = (tab, scope = 'both') => {
       file: '/data/collect.js'
     }, arr => {
       chrome.runtime.lastError;
-      resolve(arr);
-    });
-  }), new Promise(resolve => setTimeout(() => resolve(), 1000))]).then(arr => {
-    try {
       arr = (arr || [{
         body: '',
         date: new Date(document.lastModified).toISOString().split('T')[0].replace(/-/g, ''),
@@ -51,7 +47,43 @@ const index = (tab, scope = 'both') => {
         title: tab.title,
         url: tab.url,
         top: true
-      }]).filter(a => a && (a.title || a.body));
+      }]).filter(a => a).map(o => {
+        o.title = o.title || tab.title;
+        return o;
+      });
+      // support parsing PDF files
+      let parse = false;
+      if (options['parse-pdf'] === true) {
+        if (arr[0].mime === 'application/pdf' || tab.url.indexOf('.pdf') !== -1) {
+          if (scope === 'both' || scope === 'body') {
+            parse = true;
+          }
+        }
+      }
+      if (parse) {
+        pdfjsLib.getDocument(tab.url).promise.then(pdf => {
+          return Promise.all(Array.from(Array(pdf.numPages)).map(async (a, n) => {
+            const page = await pdf.getPage(n + 1);
+            const content = await page.getTextContent();
+            return content.items.map(s => s.str).join('') + '\n\n' +
+              content.items.map(s => s.str).join('\n');
+          })).then(a => a.join('\n\n')).then(c => {
+            arr[0].body = c;
+            arr[0].pdf = true;
+            resolve(arr);
+          });
+        }).catch(e => {
+          console.warn('Cannot parse PDF document', tab.url, e);
+          resolve(arr);
+        });
+      }
+      else {
+        resolve(arr);
+      }
+    });
+  }), new Promise(resolve => setTimeout(() => resolve(), 1000))]).then(arr => {
+    try {
+      arr = arr.filter(a => a && (a.title || a.body));
 
       arr.forEach(o => {
         o.lang = engine.language(o.lang);
@@ -89,14 +121,14 @@ const index = (tab, scope = 'both') => {
 document.addEventListener('engine-ready', () => chrome.tabs.query({}, async tabs => {
   tabs.forEach(tab => cache[tab.id] = tab);
 
-  const {scope, duplicates} = await (new Promise(resolve => chrome.storage.local.get({
-    scope: 'both',
-    duplicates: true
+  const prefs = await (new Promise(resolve => chrome.storage.local.get({
+    'scope': 'both',
+    'parse-pdf': true,
+    'duplicates': true
   }, prefs => resolve(prefs))));
 
   let ignored = 0;
-  console.log(duplicates);
-  if (duplicates) {
+  if (prefs.duplicates) {
     const list = new Set();
     tabs = tabs.filter(t => {
       if (list.has(t.url)) {
@@ -108,13 +140,15 @@ document.addEventListener('engine-ready', () => chrome.tabs.query({}, async tabs
     });
   }
 
-
-  docs = (await Promise.all(tabs.map(tab => index(tab, scope)))).reduce((p, c) => {
+  docs = (await Promise.all(tabs.map(tab => index(tab, prefs.scope, {
+    'parse-pdf': prefs['parse-pdf']
+  })))).reduce((p, c) => {
     if (c === 0) {
       ignored += 1;
     }
     return p + c;
   }, 0);
+
   if (docs === 0) {
     root.dataset.empty = 'Nothing to index. You need to have some tabs open.';
   }
