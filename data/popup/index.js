@@ -1,6 +1,8 @@
 /* globals engine, pdfjsLib */
 'use strict';
 
+// Tests => PDF, discarded tab, about:blank, about:addons, google
+
 const args = new URLSearchParams(location.search);
 if (args.get('mode') === 'sidebar') {
   document.body.dataset.mode = 'sidebar';
@@ -29,6 +31,18 @@ arrange.do = () => {
 const cache = {};
 
 const index = (tab, scope = 'both', options = {}) => {
+  const od = {
+    body: '',
+    date: new Date(document.lastModified).toISOString().split('T')[0].replace(/-/g, ''),
+    description: '',
+    frameId: 0,
+    keywords: '',
+    lang: 'english',
+    mime: 'text/html',
+    title: tab.title,
+    url: tab.url,
+    top: true
+  };
   return Promise.race([new Promise(resolve => {
     chrome.tabs.executeScript(tab.id, {
       runAt: 'document_start',
@@ -36,25 +50,16 @@ const index = (tab, scope = 'both', options = {}) => {
       file: '/data/collect.js'
     }, arr => {
       chrome.runtime.lastError;
-      arr = (arr || [{
-        body: '',
-        date: new Date(document.lastModified).toISOString().split('T')[0].replace(/-/g, ''),
-        description: '',
-        frameId: 0,
-        keywords: '',
-        lang: 'english',
-        mime: 'text/html',
-        title: tab.title,
-        url: tab.url,
-        top: true
-      }]).filter(a => a).map(o => {
+      arr = (arr || []).filter(a => a);
+      arr = (arr && arr.length ? arr : [od]).map(o => {
         o.title = o.title || tab.title;
         return o;
       });
+
       // support parsing PDF files
       let parse = false;
       if (options['parse-pdf'] === true) {
-        if (arr[0].mime === 'application/pdf' || tab.url.indexOf('.pdf') !== -1) {
+        if (arr && arr[0].mime === 'application/pdf' || tab.url.indexOf('.pdf') !== -1) {
           if (scope === 'both' || scope === 'body') {
             parse = true;
           }
@@ -81,7 +86,7 @@ const index = (tab, scope = 'both', options = {}) => {
         resolve(arr);
       }
     });
-  }), new Promise(resolve => setTimeout(() => resolve(), 1000))]).then(arr => {
+  }), new Promise(resolve => setTimeout(() => resolve([od]), 1000))]).then(arr => {
     try {
       arr = arr.filter(a => a && (a.title || a.body));
 
