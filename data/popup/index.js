@@ -365,7 +365,6 @@ const deep = async a => {
         const code = n.querySelector('h2 code');
         const percent = engine.search.percent(index);
         code.textContent = percent + '%';
-        console.log(percent, index, code);
 
         // intersection observer
         new IntersectionObserver(arrange, {
