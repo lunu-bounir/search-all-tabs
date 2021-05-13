@@ -72,6 +72,7 @@ const engine = window.engine = {
   }
 };
 
+engine.search.guid = index => index;
 engine.search.body = index => {
   const n = engine.result[index].ref;
   return Promise.resolve(engine.records[n]);
@@ -80,7 +81,7 @@ engine.search.percent = index => {
   const score = engine.result[index].score;
   return (Math.min(1, score) * 100).toFixed(0);
 };
-engine.search.snippet = ({index}) => {
+engine.search.snippet = ({index, size}) => {
   const n = engine.result[index].ref;
   const metadata = engine.result[index].matchData.metadata;
   // only consider keys that are in body
@@ -91,7 +92,7 @@ engine.search.snippet = ({index}) => {
     const body = engine.records[n].body;
     // first index
     const startIndex = Math.max(0, body.substr(0, Math.min(...positions.map(a => a[0]))).lastIndexOf(' '));
-    const length = Math.max(100, body.substr(startIndex + 100).indexOf(' '));
+    const length = Math.max(size, body.substr(startIndex + size).indexOf(' '));
     const highlights = [];
     for (const [x, len] of positions) {
       if (x >= startIndex && x + len <= startIndex + length) {

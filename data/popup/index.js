@@ -59,7 +59,7 @@ const index = (tab, scope = 'both', options = {}) => {
       // support parsing PDF files
       let parse = false;
       if (options['parse-pdf'] === true) {
-        if (arr && arr[0].mime === 'application/pdf' || tab.url.indexOf('.pdf') !== -1) {
+        if (arr && tab.url && (arr[0].mime === 'application/pdf' || tab.url.indexOf('.pdf') !== -1)) {
           if (scope === 'both' || scope === 'body') {
             parse = true;
           }
@@ -111,7 +111,8 @@ const index = (tab, scope = 'both', options = {}) => {
           windowId: tab.windowId,
           favIconUrl: favIconUrl || 'web.svg',
           frameId: o.frameId,
-          top: o.top
+          top: o.top,
+          lang: o.lang
         });
       });
       return arr.length;
@@ -217,77 +218,86 @@ document.getElementById('search').addEventListener('input', e => {
   const info = document.getElementById('info');
   if (query && ready) {
     const start = Date.now();
-    // detect input language
-    chrome.i18n.detectLanguage(query, async obj => {
-      const lang = engine.language(obj && obj.languages.length ? obj.languages[0].language : 'en');
+    chrome.storage.local.get({
+      'snippet-size': 300,
+      'search-size': 30
+    }, prefs => {
+      // detect input language
+      chrome.i18n.detectLanguage(query, async obj => {
+        const lang = engine.language(obj && obj.languages.length ? obj.languages[0].language : 'en');
 
-      try {
-        const {size, estimated} = engine.search({
-          query,
-          lang
-        });
-
-        root.dataset.size = size;
-
-        if (size === 0) {
-          info.textContent = '';
-          return;
-        }
-        info.textContent =
-          `About ${estimated} results (${((Date.now() - start) / 1000).toFixed(2)} seconds in ${docs} documents)`;
-
-        const t = document.getElementById('result');
-        for (let index = 0; index < size; index += 1) {
-          const obj = await engine.search.body(index);
-          const clone = document.importNode(t.content, true);
-          clone.querySelector('a').href = obj.url;
-          Object.assign(clone.querySelector('a').dataset, {
-            tabId: obj.tabId,
-            windowId: obj.windowId,
-            frameId: obj.frameId,
-            index
+        try {
+          const {size, estimated} = engine.search({
+            query,
+            lang,
+            length: prefs['search-size']
           });
-          clone.querySelector('cite').textContent = obj.url;
-          clone.querySelector('h2 span[data-id="number"]').textContent = '#' + (index + 1);
-          clone.querySelector('h2').title = clone.querySelector('h2 span[data-id="title"]').textContent = obj.title;
-          clone.querySelector('h2 img').src = obj.favIconUrl || cache[obj.tabId].favIconUrl || 'chrome://favicon/' + obj.url;
-          clone.querySelector('h2 img').onerror = e => {
-            e.target.src = 'web.svg';
-          };
-          if (!obj.top) {
-            clone.querySelector('h2 span[data-id="type"]').textContent = 'iframe';
-          }
-          const code = clone.querySelector('h2 code');
-          const percent = engine.search.percent(index);
-          code.textContent = percent + '%';
-          if (percent > 80) {
-            code.style['background-color'] = 'green';
-          }
-          else if (code > 60) {
-            code.style['background-color'] = 'orange';
-          }
-          else {
-            code.style['background-color'] = 'gray';
-          }
-          const snippet = await engine.search.snippet({
-            index
-          });
-          // the HTML code that is returns from snippet is escaped
-          // https://xapian.org/docs/apidoc/html/classXapian_1_1MSet.html#a6f834ac35fdcc58fcd5eb38fc7f320f1
-          clone.querySelector('p').content = clone.querySelector('p').innerHTML = snippet;
 
-          // intersection observer
-          new IntersectionObserver(arrange, {
-            threshold: 1.0
-          }).observe(clone.querySelector('h2'));
+          root.dataset.size = size;
 
-          root.appendChild(clone);
+          if (size === 0) {
+            info.textContent = '';
+            return;
+          }
+          info.textContent =
+            `About ${estimated} results (${((Date.now() - start) / 1000).toFixed(2)} seconds in ${docs} documents)`;
+
+          const t = document.getElementById('result');
+          for (let index = 0; index < size; index += 1) {
+            const obj = await engine.search.body(index);
+            const guid = engine.search.guid(index);
+            const clone = document.importNode(t.content, true);
+            clone.querySelector('a').href = obj.url;
+            Object.assign(clone.querySelector('a').dataset, {
+              tabId: obj.tabId,
+              windowId: obj.windowId,
+              frameId: obj.frameId,
+              index,
+              guid
+            });
+            clone.querySelector('cite').textContent = obj.url;
+            clone.querySelector('h2 span[data-id="number"]').textContent = '#' + (index + 1);
+            clone.querySelector('h2').title = clone.querySelector('h2 span[data-id="title"]').textContent = obj.title;
+            clone.querySelector('h2 img').src = obj.favIconUrl || cache[obj.tabId].favIconUrl || 'chrome://favicon/' + obj.url;
+            clone.querySelector('h2 img').onerror = e => {
+              e.target.src = 'web.svg';
+            };
+            if (!obj.top) {
+              clone.querySelector('h2 span[data-id="type"]').textContent = 'iframe';
+            }
+            const code = clone.querySelector('h2 code');
+            const percent = engine.search.percent(index);
+            code.textContent = percent + '%';
+            if (percent > 80) {
+              code.style['background-color'] = 'green';
+            }
+            else if (code > 60) {
+              code.style['background-color'] = 'orange';
+            }
+            else {
+              code.style['background-color'] = 'gray';
+            }
+            const snippet = await engine.search.snippet({
+              index,
+              size: prefs['snippet-size']
+            });
+            // the HTML code that is returns from snippet is escaped
+            // https://xapian.org/docs/apidoc/html/classXapian_1_1MSet.html#a6f834ac35fdcc58fcd5eb38fc7f320f1
+            clone.querySelector('p').content = clone.querySelector('p').innerHTML = snippet;
+
+            // intersection observer
+            new IntersectionObserver(arrange, {
+              threshold: 1.0
+            }).observe(clone.querySelector('h2'));
+
+            root.appendChild(clone);
+          }
         }
-      }
-      catch (e) {
-        console.warn(e);
-        info.textContent = e.message || 'Unknown error occurred';
-      }
+        catch (e) {
+          console.warn(e);
+          info.textContent = e.message || 'Unknown error occurred';
+        }
+      });
     });
   }
   else {
@@ -298,8 +308,91 @@ document.getElementById('search').addEventListener('input', e => {
   chrome.storage.local.set({query});
 });
 
+const deep = async a => {
+  const guid = a.dataset.guid;
+  const data = await engine.body(guid);
+  engine.new(1, 'one-tab');
+
+  const prefs = await new Promise(resolve => chrome.storage.local.get({
+    'snippet-size': 300,
+    'search-size': 30
+  }, resolve));
+
+  const parts = data.body.split(/\n+/).filter(a => a);
+  const bodies = [];
+  let body = '';
+  for (const part of parts) {
+    body += '\n' + part;
+
+    if (body.length > prefs['snippet-size']) {
+      bodies.push(body);
+      body = '';
+    }
+  }
+  if (body) {
+    bodies.push(body);
+  }
+
+  const lang = data.lang;
+  try {
+    for (const body of bodies) {
+      engine.add({
+        body,
+        lang
+      }, undefined, undefined, 1);
+    }
+    const {size} = engine.search({
+      query: document.querySelector('#search input[type=search]').value,
+      lang,
+      length: prefs['search-size']
+    }, 1);
+
+    if (size) {
+      const o = a.closest('.result');
+      for (let index = size - 1; index >= 0; index -= 1) {
+        const n = o.cloneNode(true);
+
+        const snippet = await engine.search.snippet({
+          index,
+          size: prefs['snippet-size']
+        });
+
+        n.classList.add('sub');
+        n.querySelector('img').remove();
+        n.querySelector('[data-id=title]').textContent = '⇢ ' + n.querySelector('[data-id=title]').textContent;
+        n.querySelector('p').content = n.querySelector('p').innerHTML = snippet;
+
+        const code = n.querySelector('h2 code');
+        const percent = engine.search.percent(index);
+        code.textContent = percent + '%';
+        console.log(percent, index, code);
+
+        // intersection observer
+        new IntersectionObserver(arrange, {
+          threshold: 1.0
+        }).observe(n.querySelector('h2'));
+
+        o.insertAdjacentElement('afterend', n);
+      }
+    }
+  }
+  catch (e) {
+    console.warn(e);
+  }
+  engine.release(1);
+};
+
 document.addEventListener('click', e => {
   const a = e.target.closest('[data-cmd]');
+
+  if (e.target.dataset.id === 'deep-search') {
+    e.preventDefault();
+    e.target.textContent = '';
+    e.target.classList.add('done');
+
+    return deep(a);
+  }
+
   if (a) {
     const cmd = a.dataset.cmd;
 
@@ -457,6 +550,7 @@ chrome.storage.local.get({
 }, prefs => {
   const s = document.createElement('script');
   s.src = '../' + prefs.engine + '/connect.js';
-  console.log('I am using', prefs.engine, 'engine');
+  console.info('I am using', prefs.engine, 'engine');
+  document.body.dataset.engine = prefs.engine;
   document.body.appendChild(s);
 });

@@ -167,6 +167,21 @@ b {
   display: flex;
   align-items: center;
 }
+.result.sub a h2 {
+  font-size: 100%;
+}
+.result a h2 span[data-id="deep-search"] {
+  width: 16px;
+  height: 16px;
+  background: url(more.svg) center center no-repeat;
+  background-size: 16px;
+}
+.result a h2 span[data-id="deep-search"].done {
+  display: none;
+}
+body[data-engine=lunr] span[data-id="deep-search"] {
+  display: none;
+}
 .result a:hover h2 span[data-id="title"] {
   text-decoration: underline;
 }

@@ -55,7 +55,9 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
     'engine': 'xapian',
     'strict': false,
     'duplicates': true,
-    'parse-pdf': true
+    'parse-pdf': true,
+    'search-size': 30,
+    'snippet-size': 300
   }, prefs => {
     chrome.contextMenus.create({
       id: 'automatic-search',
@@ -169,6 +171,68 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
       checked: prefs['parse-pdf'],
       parentId: 'options'
     });
+    chrome.contextMenus.create({
+      id: 'search',
+      title: 'Search Size',
+      contexts: ['browser_action'],
+      checked: prefs.duplicates,
+      parentId: 'options'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'search:10',
+      title: '10 results',
+      contexts: ['browser_action'],
+      checked: prefs['search-size'] === 10,
+      parentId: 'search'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'search:30',
+      title: '30 results',
+      contexts: ['browser_action'],
+      checked: prefs['search-size'] === 30,
+      parentId: 'search'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'search:60',
+      title: '60 results',
+      contexts: ['browser_action'],
+      checked: prefs['search-size'] === 60,
+      parentId: 'search'
+    });
+    chrome.contextMenus.create({
+      id: 'snippet',
+      title: 'Snippet Size',
+      contexts: ['browser_action'],
+      checked: prefs.duplicates,
+      parentId: 'options'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'snippet:100',
+      title: '100 words',
+      contexts: ['browser_action'],
+      checked: prefs['snippet-size'] === 100,
+      parentId: 'snippet'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'snippet:300',
+      title: '300 words',
+      contexts: ['browser_action'],
+      checked: prefs['snippet-size'] === 300,
+      parentId: 'snippet'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'snippet:600',
+      title: '600 words',
+      contexts: ['browser_action'],
+      checked: prefs['snippet-size'] === 600,
+      parentId: 'snippet'
+    });
 
     chrome.contextMenus.create({
       id: 'preview',
@@ -198,6 +262,16 @@ chrome.contextMenus.onClicked.addListener(info => {
   else if (info.menuItemId.startsWith('engine:')) {
     chrome.storage.local.set({
       engine: info.menuItemId.replace('engine:', '')
+    });
+  }
+  else if (info.menuItemId.startsWith('search:')) {
+    chrome.storage.local.set({
+      'search-size': Number(info.menuItemId.replace('search:', ''))
+    });
+  }
+  else if (info.menuItemId.startsWith('snippet:')) {
+    chrome.storage.local.set({
+      'snippet-size': Number(info.menuItemId.replace('snippet:', ''))
     });
   }
   else {

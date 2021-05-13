@@ -31,6 +31,11 @@ Module['onRuntimeInitialized'] = () => {
 
   const toString = ptr => UTF8ToString(ptr); // eslint-disable-line new-cap
 
+  // add a new database
+  xapian.new = (index, name) => {
+    _prepare(index, name);
+  };
+
   xapian.compact = (index, directory) => new Promise((resolve, reject) => {
     _compact(index, directory);
     FS.syncfs(e => {
@@ -172,20 +177,20 @@ Module['onRuntimeInitialized'] = () => {
   };
   // get snippet based on the actual content of the "index"ed matching result
   // if body is not stored, content is mandatory
-  xapian.search.snippet = ({index, lang = 'english', omit = '', content}) => {
+  xapian.search.snippet = ({index, lang = 'english', omit = '', content, size = 300}) => {
     if (content) {
-      return Promise.resolve(_snippet(lang, content, 300, omit));
+      return Promise.resolve(_snippet(lang, content, size, omit));
     }
     if (xapian.config.object.store === false) {
       throw Error('xapian.search.snippet  is called without content');
     }
     const guid = xapian.search.guid(index);
     if (xapian.config.persistent) {
-      return xapian.body(guid).then(obj => _snippet(lang, obj.body, 300, omit));
+      return xapian.body(guid).then(obj => _snippet(lang, obj.body, size, omit));
     }
     else {
       const body = xapian.cache[guid].body;
-      return Promise.resolve(_snippet(lang, body, 300, omit));
+      return Promise.resolve(_snippet(lang, body, size, omit));
     }
   };
   // get weight percent of "index"ed matching result
