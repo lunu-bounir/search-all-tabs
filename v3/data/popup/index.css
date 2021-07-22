@@ -1,0 +1,276 @@
+:root {
+  --bg-color: #fdfdfd;
+  --code-bg: rgba(0, 0, 0, 0.05);
+  --search: #4d5156;
+  --search-bg: #fff;
+  --search-border: #dfe1e5;
+  --search-border-active: rgba(223, 225, 229, 0);
+  --search-fill: #3e85f4;
+  --info-bg: #808080;
+  --empty-results: #808080;
+  --empty-results-border: #eee;
+  --result-cite: #006621;
+  --result-span: #fff;
+  --result-p: #4d5156;
+  --result-type-bg: #658a98;
+  --guide-bg: #f6fff5;
+  --guide-border: #dadada;
+  --a: #1a0dab;
+  --a-visited: #609;
+  --img-bg: #fff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #35363a;
+    --search: #f0f3f4;
+    --search-bg: #202124;
+    --search-border: #6e6f72;
+    --result-cite: #00902f;
+    --result-p: #b1b1b1;
+    --a: #4389e2;
+    --a-visited: #c1768a;
+    --result-type-bg: #3c5863;
+    --guide-bg: #aeb9ac;
+    --guide-border: #6e6f72;
+  }
+}
+
+body {
+  width: 700px;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-family: "Helvetica Neue", Helvetica, sans-serif;
+  font-size: 13px;
+  background-color: var(--bg-color);
+}
+body[data-mode=sidebar] {
+  width: 100%;
+}
+header {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 20px 0;
+  position: relative;
+}
+a {
+  text-decoration: none;
+  color: var(--a);
+}
+a:visited {
+  color: var(--a-visited);
+}
+h2 {
+  font-weight: 400;
+  margin: 0;
+}
+code {
+  background-color: var(--code-bg);
+  padding: 1px 2px;
+}
+b {
+  color: #948080;
+}
+
+#faqs {
+  position: absolute;
+  right: 20px;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+@media screen and (max-width: 500px)  {
+  #faqs {
+    display: none;
+  }
+}
+#search {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--search-border);
+  height: 44px;
+  width: 500px;
+  border-radius: 24px;
+  overflow: hidden;
+  color: var(--search);
+  background-color: var(--search-bg);
+}
+@media screen and (max-width: 500px)  {
+  #search {
+    border: none;
+    border-radius: 0;
+  }
+}
+#search:hover {
+  box-shadow: 0 1px 6px 0 rgba(32, 33, 36, 0.28);
+  border-color: var(--search-border-active);
+}
+#search input[type=search] {
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  padding-left: 20px;
+  outline: none;
+}
+#search button[type=submit] {
+  fill: var(--search-fill);
+  height: 28px;
+  width: 28px;
+  min-width: 18px;
+  padding: 0 10px;
+  box-sizing: content-box;
+  background-color: transparent;
+  border: none;
+  outline: none;
+}
+#info {
+  font-size: small;
+  color: var(--info-bg);
+  padding: 0 30px;
+  display: flex;
+  justify-content: flex-end;
+}
+#results {
+  overflow: auto;
+  margin: 10px 0 20px 0;
+  flex: 1;
+}
+#results:not(:empty) {
+  border-top: solid 1px var(--empty-results-border);
+}
+#results:empty::before,
+#results[data-size="0"]::before {
+  display: flex;
+  width: calc(100% - 30px);
+  padding: 0 15px;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  color: var(--empty-results);
+}
+#results:empty::before {
+  content: attr(data-empty);
+}
+#results[data-size="0"]::before {
+  content: 'no match in your tabs!';
+}
+.result {
+  margin: 10px 20px;
+  overflow: hidden;
+}
+.result a {
+  user-select: none;
+}
+.result a h2 {
+  display: flex;
+  align-items: center;
+}
+.result.sub a h2 {
+  font-size: 100%;
+}
+.result a h2 span[data-id="deep-search"] {
+  width: 16px;
+  height: 16px;
+  background: url(more.svg) center center no-repeat;
+  background-size: 16px;
+}
+.result a h2 span[data-id="deep-search"].done {
+  display: none;
+}
+body[data-engine=lunr] span[data-id="deep-search"] {
+  display: none;
+}
+.result a:hover h2 span[data-id="title"] {
+  text-decoration: underline;
+}
+.result a h2 span[data-id="title"] {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.result a cite {
+  color: var(--result-cite);
+  font-style: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  width: 100%;
+}
+.result p {
+  margin: 0;
+  color: var(--result-p)
+}
+.result p:empty::before {
+  content: 'Preview is not supported for this entry';
+}
+.result img {
+  width: 16px;
+  margin-right: 5px;
+  background-color: var(--img-bg)
+}
+.result h2 span[data-id="type"],
+.result h2 span[data-id="number"],
+.result h2 code {
+  margin-left: 10px;
+  color: var(--result-span);
+  padding: 1px 5px;
+  font-size: 11px;
+  font-family: arial, sans-serif;
+  text-align: center;
+}
+.result h2 code {
+  min-width: 32px;
+}
+.result h2 span[data-id="type"]:empty {
+  display: none;
+}
+.result h2 span[data-id="type"] {
+  background-color: var(--result-type-bg);
+}
+.result h2 span[data-id="number"] {
+  min-width: 20px;
+  background-color: gray;
+}
+#internal,
+#guide {
+  background-color: var(--guide-bg);
+  border: solid 1px var(--guide-border);
+  border-left: none;
+  border-right: none;
+  margin-bottom: 10px;
+  position: relative;
+  padding: 10px;
+}
+#internal-close,
+#guide-close {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  font-size: 20px;
+  cursor: pointer;
+}
+#guide ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+#guide li:not(:last-child) {
+  margin-bottom: 5px;
+}
+#internal {
+  display: grid;
+  grid-template-columns: 1fr min-content;
+  align-items: center;
+}
+#internal input[type=submit] {
+  float: right;
+  margin-right: 30px;
+  cursor: pointer;
+}
+.hidden {
+  display: none !important;
+}
