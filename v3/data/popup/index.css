@@ -18,6 +18,13 @@
   --a: #1a0dab;
   --a-visited: #609;
   --img-bg: #fff;
+  --highlight-color: #948080;
+  --highlight-green: #006621;
+  --highlight-orange: #e88b35;
+  --highlight-pink: #609;
+  --highlight-yellow: #a09600;
+  --highlight-blue: #0071a2;
+  --highlight-nocolor: inherit;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -32,6 +39,11 @@
     --result-type-bg: #3c5863;
     --guide-bg: #aeb9ac;
     --guide-border: #6e6f72;
+    --highlight-green: #00902f;
+    --highlight-orange: #ca9100;
+    --highlight-pink: #c1768a;
+    --highlight-yellow: #f5eb61;
+    --highlight-blue: #acdaee;
   }
 }
 
@@ -70,7 +82,7 @@ code {
   padding: 1px 2px;
 }
 b {
-  color: #948080;
+  color: var(--highlight-color);
 }
 
 #faqs {

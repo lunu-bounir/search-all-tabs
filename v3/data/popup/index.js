@@ -132,9 +132,17 @@ document.addEventListener('engine-ready', () => chrome.tabs.query({}, async tabs
   const prefs = await (new Promise(resolve => chrome.storage.local.get({
     'scope': 'both',
     'parse-pdf': true,
-    'duplicates': true
+    'duplicates': true,
+    'highlight-color': 'orange'
   }, prefs => resolve(prefs))));
 
+  // highlight
+  document.documentElement.style.setProperty(
+    '--highlight-color',
+    'var(--highlight-' + prefs['highlight-color'] + ')'
+  );
+
+  // index
   let ignored = 0;
   if (prefs.duplicates) {
     const list = new Set();

@@ -59,7 +59,8 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
     'duplicates': true,
     'parse-pdf': true,
     'search-size': 30,
-    'snippet-size': 300
+    'snippet-size': 300,
+    'highlight-color': 'orange'
   }, prefs => {
     chrome.contextMenus.create({
       id: 'automatic-search',
@@ -208,7 +209,6 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
       id: 'snippet',
       title: 'Snippet Size',
       contexts: ['action'],
-      checked: prefs.duplicates,
       parentId: 'options'
     });
     chrome.contextMenus.create({
@@ -234,6 +234,60 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
       contexts: ['action'],
       checked: prefs['snippet-size'] === 600,
       parentId: 'snippet'
+    });
+    chrome.contextMenus.create({
+      id: 'highlight',
+      title: 'Highlight Color',
+      contexts: ['action'],
+      parentId: 'options'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'highlight:green',
+      title: 'Green',
+      contexts: ['action'],
+      checked: prefs['highlight-color'] === 'green',
+      parentId: 'highlight'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'highlight:orange',
+      title: 'Orange',
+      contexts: ['action'],
+      checked: prefs['highlight-color'] === 'orange',
+      parentId: 'highlight'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'highlight:pink',
+      title: 'Pink',
+      contexts: ['action'],
+      checked: prefs['highlight-color'] === 'pink',
+      parentId: 'highlight'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'highlight:yellow',
+      title: 'Yellow',
+      contexts: ['action'],
+      checked: prefs['highlight-color'] === 'yellow',
+      parentId: 'highlight'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'highlight:blue',
+      title: 'Blue',
+      contexts: ['action'],
+      checked: prefs['highlight-color'] === 'blue',
+      parentId: 'highlight'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'highlight:nocolor',
+      title: 'No Color',
+      contexts: ['action'],
+      checked: prefs['highlight-color'] === 'nocolor',
+      parentId: 'highlight'
     });
 
     chrome.contextMenus.create({
@@ -274,6 +328,11 @@ chrome.contextMenus.onClicked.addListener(info => {
   else if (info.menuItemId.startsWith('snippet:')) {
     chrome.storage.local.set({
       'snippet-size': Number(info.menuItemId.replace('snippet:', ''))
+    });
+  }
+  else if (info.menuItemId.startsWith('highlight:')) {
+    chrome.storage.local.set({
+      'highlight-color': info.menuItemId.replace('highlight:', '')
     });
   }
   else {
