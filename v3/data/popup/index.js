@@ -126,15 +126,22 @@ const index = (tab, scope = 'both', options = {}) => {
   });
 };
 
-document.addEventListener('engine-ready', () => chrome.tabs.query({}, async tabs => {
-  tabs.forEach(tab => cache[tab.id] = tab);
-
+document.addEventListener('engine-ready', async () => {
   const prefs = await (new Promise(resolve => chrome.storage.local.get({
     'scope': 'both',
+    'index': 'browser',
     'parse-pdf': true,
     'duplicates': true,
     'highlight-color': 'orange'
   }, prefs => resolve(prefs))));
+
+  const query = {};
+  if (prefs.index === 'window') {
+    query.currentWindow = true;
+  }
+  let tabs = await chrome.tabs.query(query);
+  tabs.forEach(tab => cache[tab.id] = tab);
+
 
   // highlight
   document.documentElement.style.setProperty(
@@ -224,7 +231,7 @@ document.addEventListener('engine-ready', () => chrome.tabs.query({}, async tabs
       }
     });
   }
-}));
+});
 
 const root = document.getElementById('results');
 

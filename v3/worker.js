@@ -54,6 +54,7 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
   const startup = () => chrome.storage.local.get({
     'mode': 'none',
     'scope': 'both',
+    'index': 'browser', // 'browser', 'window'
     'engine': 'xapian',
     'strict': false,
     'duplicates': true,
@@ -120,6 +121,28 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
       contexts: ['action'],
       checked: prefs.scope === 'both',
       parentId: 'search-scope'
+    });
+
+    chrome.contextMenus.create({
+      id: 'search-index',
+      title: 'Search Crawler',
+      contexts: ['action']
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'index:window',
+      title: 'Only index current window',
+      contexts: ['action'],
+      checked: prefs.index === 'window',
+      parentId: 'search-index'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'index:browser',
+      title: 'Index all windows',
+      contexts: ['action'],
+      checked: prefs.index === 'browser',
+      parentId: 'search-index'
     });
 
     chrome.contextMenus.create({
@@ -313,6 +336,11 @@ chrome.contextMenus.onClicked.addListener(info => {
   else if (info.menuItemId.startsWith('scope:')) {
     chrome.storage.local.set({
       scope: info.menuItemId.replace('scope:', '')
+    });
+  }
+  else if (info.menuItemId.startsWith('index:')) {
+    chrome.storage.local.set({
+      index: info.menuItemId.replace('index:', '')
     });
   }
   else if (info.menuItemId.startsWith('engine:')) {
