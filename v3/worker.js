@@ -54,7 +54,7 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
   const startup = () => chrome.storage.local.get({
     'mode': 'none',
     'scope': 'both',
-    'index': 'browser', // 'browser', 'window'
+    'index': 'browser', // 'browser', 'window', tab'
     'engine': 'xapian',
     'strict': false,
     'duplicates': true,
@@ -134,6 +134,14 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
       title: 'Only index current window',
       contexts: ['action'],
       checked: prefs.index === 'window',
+      parentId: 'search-index'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'index:tab',
+      title: 'Only index current tab',
+      contexts: ['action'],
+      checked: prefs.index === 'tab',
       parentId: 'search-index'
     });
     chrome.contextMenus.create({

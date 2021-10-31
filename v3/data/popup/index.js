@@ -136,10 +136,14 @@ document.addEventListener('engine-ready', async () => {
   }, prefs => resolve(prefs))));
 
   const query = {};
-  if (prefs.index === 'window') {
+  if (prefs.index === 'window' || prefs.index === 'tab') {
     query.currentWindow = true;
   }
+  if (prefs.index === 'tab') {
+    query.active = true;
+  }
   let tabs = await chrome.tabs.query(query);
+  console.log(tabs);
   tabs.forEach(tab => cache[tab.id] = tab);
 
 
