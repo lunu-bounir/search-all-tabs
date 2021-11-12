@@ -198,42 +198,7 @@ document.addEventListener('engine-ready', async () => {
       mode: 'none',
       query: ''
     }, prefs => {
-      if (prefs.mode === 'selectedORhistory') {
-        chrome.tabs.query({
-          currentWindow: true,
-          active: true
-        }, ([tab]) => chrome.scripting.executeScript({
-          target: {
-            tabId: tab.id
-          },
-          func: () => {
-            return window.getSelection().toString();
-          }
-        }, (arr = []) => {
-          console.log(arr);
-          if (chrome.runtime.lastError || input.value) {
-            return;
-          }
-          const query = arr.reduce((p, c) => p || c.result, '');
-          if (query) {
-            input.value = query;
-            input.select();
-            input.dispatchEvent(new Event('input', {
-                bubbles: true
-            }));
-          }
-          else {
-            if (prefs.query) {
-              input.value = prefs.query;
-              input.select();
-              input.dispatchEvent(new Event('input', {
-                  bubbles: true
-              }));
-            }
-          }
-        }));
-      }
-      else if (prefs.mode === 'selected') {
+      if (prefs.mode === 'selected' || prefs.mode === 'selectedORhistory') {
         // do we have selected text
 
         chrome.tabs.query({
@@ -257,6 +222,13 @@ document.addEventListener('engine-ready', async () => {
             input.select();
             input.dispatchEvent(new Event('input', {
               bubbles: true
+            }));
+          }
+          else if (prefs.mode === 'selectedORhistory' && prefs.query){
+            input.value = prefs.query;
+            input.select();
+            input.dispatchEvent(new Event('input', {
+                bubbles: true
             }));
           }
         }));
