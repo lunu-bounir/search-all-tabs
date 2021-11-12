@@ -70,6 +70,14 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
     });
     chrome.contextMenus.create({
       type: 'radio',
+      id: 'mode:selectedORhistory',
+      title: 'Selected text or last query',
+      contexts: ['action'],
+      checked: prefs.mode === 'selectedORhistory',
+      parentId: 'automatic-search'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
       id: 'mode:selected',
       title: 'Selected Text',
       contexts: ['action'],
