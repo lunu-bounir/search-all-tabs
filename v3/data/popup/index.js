@@ -198,7 +198,7 @@ document.addEventListener('engine-ready', async () => {
       mode: 'none',
       query: ''
     }, prefs => {
-      if (prefs.mode === 'selected') {
+      if (prefs.mode === 'selected' || prefs.mode === 'selectedORhistory') {
         // do we have selected text
 
         chrome.tabs.query({
@@ -222,6 +222,13 @@ document.addEventListener('engine-ready', async () => {
             input.select();
             input.dispatchEvent(new Event('input', {
               bubbles: true
+            }));
+          }
+          else if (prefs.mode === 'selectedORhistory' && prefs.query){
+            input.value = prefs.query;
+            input.select();
+            input.dispatchEvent(new Event('input', {
+                bubbles: true
             }));
           }
         }));
