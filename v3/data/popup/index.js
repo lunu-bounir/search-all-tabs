@@ -143,7 +143,6 @@ document.addEventListener('engine-ready', async () => {
     query.active = true;
   }
   let tabs = await chrome.tabs.query(query);
-  console.log(tabs);
   tabs.forEach(tab => cache[tab.id] = tab);
 
 
@@ -212,7 +211,6 @@ document.addEventListener('engine-ready', async () => {
             return window.getSelection().toString();
           }
         }, (arr = []) => {
-          console.log(arr);
           if (chrome.runtime.lastError || input.value) {
             return;
           }
@@ -224,11 +222,11 @@ document.addEventListener('engine-ready', async () => {
               bubbles: true
             }));
           }
-          else if (prefs.mode === 'selectedORhistory' && prefs.query){
+          else if (prefs.mode === 'selectedORhistory' && prefs.query) {
             input.value = prefs.query;
             input.select();
             input.dispatchEvent(new Event('input', {
-                bubbles: true
+              bubbles: true
             }));
           }
         }));

@@ -10,7 +10,6 @@ const engine = window.engine = {
   },
   search({query, origin, lang}) {
     origin = origin || query;
-    console.log(lang);
     const idx = engine.idx[lang] || lunr(function() {
       if (lang in lunr) {
         this.use(lunr[lang]);
