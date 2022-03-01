@@ -59,6 +59,7 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
     'strict': false,
     'duplicates': true,
     'parse-pdf': true,
+    'fetch-timeout': 10000, // ms
     'search-size': 30,
     'snippet-size': 300,
     'highlight-color': 'orange'
@@ -177,7 +178,7 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
     chrome.contextMenus.create({
       type: 'radio',
       id: 'engine:xapian',
-      title: 'xapian.js',
+      title: 'xapian.js (recommended)',
       contexts: ['action'],
       checked: prefs.engine === 'xapian',
       parentId: 'search-engine'
@@ -212,6 +213,52 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
       contexts: ['action'],
       checked: prefs['parse-pdf'],
       parentId: 'options'
+    });
+    chrome.contextMenus.create({
+      id: 'fetch-timeout',
+      title: 'Wait for Indexing',
+      contexts: ['action'],
+      parentId: 'options'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'fetch-timeout-1000',
+      title: '1 second',
+      contexts: ['action'],
+      checked: prefs['fetch-timeout'] === 1000,
+      parentId: 'fetch-timeout'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'fetch-timeout-5000',
+      title: '5 seconds',
+      contexts: ['action'],
+      checked: prefs['fetch-timeout'] === 5000,
+      parentId: 'fetch-timeout'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'fetch-timeout-10000',
+      title: '10 seconds',
+      contexts: ['action'],
+      checked: prefs['fetch-timeout'] === 10000,
+      parentId: 'fetch-timeout'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'fetch-timeout-30000',
+      title: '30 seconds',
+      contexts: ['action'],
+      checked: prefs['fetch-timeout'] === 30000,
+      parentId: 'fetch-timeout'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'fetch-timeout-60000',
+      title: '1 minute',
+      contexts: ['action'],
+      checked: prefs['fetch-timeout'] === 60000,
+      parentId: 'fetch-timeout'
     });
     chrome.contextMenus.create({
       id: 'search',
@@ -342,6 +389,12 @@ chrome.contextMenus.onClicked.addListener(info => {
   if (info.menuItemId === 'strict' || info.menuItemId === 'duplicates' || info.menuItemId === 'parse-pdf') {
     chrome.storage.local.set({
       [info.menuItemId]: info.checked
+    });
+  }
+  else if (info.menuItemId.startsWith('fetch-timeout-')) {
+    const timeout = Number(info.menuItemId.replace('fetch-timeout-', ''));
+    chrome.storage.local.set({
+      'fetch-timeout': timeout
     });
   }
   else if (info.menuItemId === 'preview') {

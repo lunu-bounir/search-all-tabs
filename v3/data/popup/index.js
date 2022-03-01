@@ -1,7 +1,10 @@
-/* globals engine, pdfjsLib */
+/* globals engine */
 'use strict';
 
 // Tests => PDF, discarded tab, about:blank, chrome://extensions/, google, webstore
+
+const pdfjsLib = window['pdfjs-dist/build/pdf'];
+pdfjsLib.GlobalWorkerOptions.workerSrc = './parser/pdf.worker.js';
 
 const args = new URLSearchParams(location.search);
 if (args.get('mode') === 'sidebar') {
@@ -88,11 +91,13 @@ const index = (tab, scope = 'both', options = {}) => {
         resolve(arr);
       }
     });
-  }), new Promise(resolve => setTimeout(() => resolve([od]), 1000))]).then(arr => {
+  }), new Promise(resolve => setTimeout(() => {
+    resolve([od]);
+  }, options['fetch-timeout']))]).then(async arr => {
     try {
       arr = arr.filter(a => a && (a.title || a.body));
 
-      arr.forEach(o => {
+      for (const o of arr) {
         o.lang = engine.language(o.lang);
         o.title = o.title || tab.title || cache[tab.id].title;
         if (o.title) {
@@ -108,7 +113,7 @@ const index = (tab, scope = 'both', options = {}) => {
         else if (scope === 'title') {
           o.body = '';
         }
-        engine.add(o, {
+        await engine.add(o, {
           tabId: tab.id,
           windowId: tab.windowId,
           favIconUrl: favIconUrl || 'web.svg',
@@ -116,7 +121,7 @@ const index = (tab, scope = 'both', options = {}) => {
           top: o.top,
           lang: o.lang
         });
-      });
+      }
       return arr.length;
     }
     catch (e) {
@@ -131,6 +136,7 @@ document.addEventListener('engine-ready', async () => {
     'scope': 'both',
     'index': 'browser',
     'parse-pdf': true,
+    'fetch-timeout': 10000,
     'duplicates': true,
     'highlight-color': 'orange'
   }, prefs => resolve(prefs))));
@@ -167,7 +173,8 @@ document.addEventListener('engine-ready', async () => {
   }
 
   docs = (await Promise.all(tabs.map(tab => index(tab, prefs.scope, {
-    'parse-pdf': prefs['parse-pdf']
+    'parse-pdf': prefs['parse-pdf'],
+    'fetch-timeout': prefs['fetch-timeout']
   })))).reduce((p, c) => {
     if (c === 0) {
       ignored += 1;
@@ -247,40 +254,58 @@ const root = document.getElementById('results');
 document.getElementById('search').addEventListener('submit', e => {
   e.preventDefault();
 });
-document.getElementById('search').addEventListener('input', e => {
-  const query = e.target.value.trim();
-  root.textContent = '';
+
+const search = query => {
+  // abort all ongoing search requests
+  for (const c of search.controllers) {
+    c.abort();
+  }
+  search.controllers.length = 0;
+  const controller = new AbortController();
+  const {signal} = controller;
+  search.controllers.push(controller);
+
   const info = document.getElementById('info');
-  if (query && ready) {
-    const start = Date.now();
-    chrome.storage.local.get({
-      'snippet-size': 300,
-      'search-size': 30
-    }, prefs => {
-      // detect input language
-      chrome.i18n.detectLanguage(query, async obj => {
-        const lang = engine.language(obj && obj.languages.length ? obj.languages[0].language : 'en');
+  const start = Date.now();
+  chrome.storage.local.get({
+    'snippet-size': 300,
+    'search-size': 30
+  }, prefs => {
+    if (signal.aborted) {
+      return;
+    }
+    // detect input language
+    chrome.i18n.detectLanguage(query, async obj => {
+      if (signal.aborted) {
+        return;
+      }
+      const lang = engine.language(obj && obj.languages.length ? obj.languages[0].language : 'en');
 
-        try {
-          const {size, estimated} = engine.search({
-            query,
-            lang,
-            length: prefs['search-size']
-          });
+      try {
+        const {size, estimated} = await engine.search({
+          query,
+          lang,
+          length: prefs['search-size']
+        });
 
-          root.dataset.size = size;
+        root.dataset.size = size;
 
-          if (size === 0) {
-            info.textContent = '';
+        if (size === 0) {
+          info.textContent = '';
+          return;
+        }
+        info.textContent =
+          `About ${estimated} results (${((Date.now() - start) / 1000).toFixed(2)} seconds in ${docs} documents)`;
+
+        const t = document.getElementById('result');
+        for (let index = 0; index < size; index += 1) {
+          if (signal.aborted) {
             return;
           }
-          info.textContent =
-            `About ${estimated} results (${((Date.now() - start) / 1000).toFixed(2)} seconds in ${docs} documents)`;
+          try {
+            const guid = await engine.search.guid(index);
+            const obj = engine.body(guid);
 
-          const t = document.getElementById('result');
-          for (let index = 0; index < size; index += 1) {
-            const obj = await engine.search.body(index);
-            const guid = engine.search.guid(index);
             const clone = document.importNode(t.content, true);
             clone.querySelector('a').href = obj.url;
             Object.assign(clone.querySelector('a').dataset, {
@@ -301,7 +326,7 @@ document.getElementById('search').addEventListener('input', e => {
               clone.querySelector('h2 span[data-id="type"]').textContent = 'iframe';
             }
             const code = clone.querySelector('h2 code');
-            const percent = engine.search.percent(index);
+            const percent = await engine.search.percent(index);
             code.textContent = percent + '%';
             if (percent > 80) {
               code.style['background-color'] = 'green';
@@ -327,13 +352,26 @@ document.getElementById('search').addEventListener('input', e => {
 
             root.appendChild(clone);
           }
+          catch (e) {
+            console.warn('Cannot add a result', e);
+          }
         }
-        catch (e) {
-          console.warn(e);
-          info.textContent = e.message || 'Unknown error occurred';
-        }
-      });
+      }
+      catch (e) {
+        console.warn(e);
+        info.textContent = e.message || 'Unknown error occurred';
+      }
     });
+  });
+};
+search.controllers = [];
+
+document.getElementById('search').addEventListener('input', e => {
+  const query = e.target.value.trim();
+  root.textContent = '';
+  const info = document.getElementById('info');
+  if (query && ready) {
+    search(query);
   }
   else {
     info.textContent = '';
@@ -345,8 +383,8 @@ document.getElementById('search').addEventListener('input', e => {
 
 const deep = async a => {
   const guid = a.dataset.guid;
-  const data = await engine.body(guid);
-  engine.new(1, 'one-tab');
+  const data = engine.body(guid);
+  await engine.new(1, 'one-tab');
 
   const prefs = await new Promise(resolve => chrome.storage.local.get({
     'snippet-size': 300,
@@ -371,12 +409,12 @@ const deep = async a => {
   const lang = data.lang;
   try {
     for (const body of bodies) {
-      engine.add({
+      await engine.add({
         body,
         lang
       }, undefined, undefined, 1);
     }
-    const {size} = engine.search({
+    const {size} = await engine.search({
       query: document.querySelector('#search input[type=search]').value,
       lang,
       length: prefs['search-size']
@@ -398,7 +436,7 @@ const deep = async a => {
         n.querySelector('p').content = n.querySelector('p').innerHTML = snippet;
 
         const code = n.querySelector('h2 code');
-        const percent = engine.search.percent(index);
+        const percent = await engine.search.percent(index);
         code.textContent = percent + '%';
 
         // intersection observer
@@ -480,6 +518,12 @@ window.addEventListener('keydown', e => {
           }
         });
       }
+    }
+    else if (e.code === 'KeyF') {
+      e.preventDefault();
+      const input = document.querySelector('#search input[type=search]');
+      input.focus();
+      input.select();
     }
   }
   else if (e.code === 'Escape' && e.target.value === '') {

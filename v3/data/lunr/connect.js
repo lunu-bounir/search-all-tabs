@@ -72,9 +72,9 @@ const engine = window.engine = {
 };
 
 engine.search.guid = index => index;
-engine.search.body = index => {
+engine.body = engine.search.body = index => {
   const n = engine.result[index].ref;
-  return Promise.resolve(engine.records[n]);
+  return engine.records[n];
 };
 engine.search.percent = index => {
   const score = engine.result[index].score;

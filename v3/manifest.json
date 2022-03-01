@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "version": "0.4.4",
+  "version": "0.4.5",
   "name": "Search all Tabs",
   "description": "__MSG_description__",
   "default_locale": "en",
@@ -31,6 +31,9 @@
   },
   "background": {
     "service_worker": "worker.js"
+  },
+  "sandbox": {
+     "pages": ["data/xapian/sandbox/index.html"]
   },
   "commands": {
     "_execute_action": {
