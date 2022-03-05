@@ -60,6 +60,7 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
     'duplicates': true,
     'parse-pdf': true,
     'fetch-timeout': 10000, // ms
+    'max-content-length': 100 * 1024, // bytes
     'search-size': 30,
     'snippet-size': 300,
     'highlight-color': 'orange'
@@ -261,6 +262,68 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
       parentId: 'fetch-timeout'
     });
     chrome.contextMenus.create({
+      id: 'max-content-length',
+      title: 'Maximum Size of Each Content',
+      contexts: ['action'],
+      parentId: 'options'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'max-content-length-1024',
+      title: '1 KB',
+      contexts: ['action'],
+      checked: prefs['max-content-length'] === 1024,
+      parentId: 'max-content-length'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'max-content-length-5120',
+      title: '5 KB',
+      contexts: ['action'],
+      checked: prefs['max-content-length'] === 5120,
+      parentId: 'max-content-length'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'max-content-length-10240',
+      title: '10 KB',
+      contexts: ['action'],
+      checked: prefs['max-content-length'] === 10240,
+      parentId: 'max-content-length'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'max-content-length-102400',
+      title: '100 KB',
+      contexts: ['action'],
+      checked: prefs['max-content-length'] === 102400,
+      parentId: 'max-content-length'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'max-content-length-512000',
+      title: '500 KB',
+      contexts: ['action'],
+      checked: prefs['max-content-length'] === 512000,
+      parentId: 'max-content-length'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'max-content-length-1048576',
+      title: '1 MB',
+      contexts: ['action'],
+      checked: prefs['max-content-length'] === 1048576,
+      parentId: 'max-content-length'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'max-content-length--1',
+      title: 'No Limit (not recommended)',
+      contexts: ['action'],
+      checked: prefs['max-content-length'] === -1,
+      parentId: 'max-content-length'
+    });
+    chrome.contextMenus.create({
       id: 'search',
       title: 'Search Size',
       contexts: ['action'],
@@ -395,6 +458,12 @@ chrome.contextMenus.onClicked.addListener(info => {
     const timeout = Number(info.menuItemId.replace('fetch-timeout-', ''));
     chrome.storage.local.set({
       'fetch-timeout': timeout
+    });
+  }
+  else if (info.menuItemId.startsWith('max-content-length-')) {
+    const bytes = Number(info.menuItemId.replace('max-content-length-', ''));
+    chrome.storage.local.set({
+      'max-content-length': bytes
     });
   }
   else if (info.menuItemId === 'preview') {

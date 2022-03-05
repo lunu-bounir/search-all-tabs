@@ -42,10 +42,10 @@ window.addEventListener('message', e => {
   const {method, request, id} = e.data;
 
   if (method === 'add') {
-    self.add(...request.args);
-    top.postMessage({
-      id
-    }, '*');
+    post(id, () => {
+      self.add(...request.args);
+      return '';
+    });
   }
   else if (method === 'search') {
     const pointer = self.query(...request.args);

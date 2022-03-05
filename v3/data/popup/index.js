@@ -113,6 +113,10 @@ const index = (tab, scope = 'both', options = {}) => {
         else if (scope === 'title') {
           o.body = '';
         }
+        if (options['max-content-length'] > 0) {
+          o.body = o.body.slice(0, options['max-content-length']);
+        }
+
         await engine.add(o, {
           tabId: tab.id,
           windowId: tab.windowId,
@@ -126,6 +130,9 @@ const index = (tab, scope = 'both', options = {}) => {
     }
     catch (e) {
       console.warn('document skipped', e);
+      if (e.message.includes('memory access out of bounds')) {
+        return -1;
+      }
       return 0;
     }
   });
@@ -137,6 +144,7 @@ document.addEventListener('engine-ready', async () => {
     'index': 'browser',
     'parse-pdf': true,
     'fetch-timeout': 10000,
+    'max-content-length': 100 * 1024,
     'duplicates': true,
     'highlight-color': 'orange'
   }, prefs => resolve(prefs))));
@@ -172,16 +180,30 @@ document.addEventListener('engine-ready', async () => {
     });
   }
 
+  let memory = false;
   docs = (await Promise.all(tabs.map(tab => index(tab, prefs.scope, {
     'parse-pdf': prefs['parse-pdf'],
-    'fetch-timeout': prefs['fetch-timeout']
+    'fetch-timeout': prefs['fetch-timeout'],
+    'max-content-length': prefs['max-content-length']
   })))).reduce((p, c) => {
-    if (c === 0) {
+    if (c === 0 || c === -1) {
       ignored += 1;
     }
-    return p + c;
+    if (c === -1) {
+      memory = true;
+      return p;
+    }
+    else {
+      return p + c;
+    }
   }, 0);
 
+  if (memory) {
+    alert(`Your browser's memory limit for indexing content reached.
+
+Right-click on the toolbar button and reduce the "Maximum Size of Each Content" option and retry.`);
+    window.close();
+  }
   if (docs === 0) {
     root.dataset.empty = 'Nothing to index. You need to have some tabs open.';
   }
