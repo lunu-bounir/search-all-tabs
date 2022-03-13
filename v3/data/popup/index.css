@@ -172,6 +172,18 @@ b {
   margin: 10px 20px;
   overflow: hidden;
 }
+.result input[type=radio] {
+  display: none;
+}
+.result input[type=radio]:checked ~ a > h2::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background-color: var(--a);
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
 .result a {
   user-select: none;
 }

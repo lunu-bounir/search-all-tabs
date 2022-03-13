@@ -337,6 +337,7 @@ const search = query => {
               index,
               guid
             });
+            clone.querySelector('input[name=search]').checked = index == 0;
             clone.querySelector('cite').textContent = obj.url;
             clone.querySelector('h2 span[data-id="number"]').textContent = '#' + (index + 1);
             clone.querySelector('h2').title = clone.querySelector('h2 span[data-id="title"]').textContent = obj.title;
@@ -512,10 +513,16 @@ document.addEventListener('click', e => {
 
 // keyboard shortcut
 window.addEventListener('keydown', e => {
+  if (e.code === 'Tab') {
+    e.preventDefault();
+    const input = document.querySelector('#search input[type=search]');
+    return input.focus();
+  }
   if ((e.metaKey || e.ctrlKey) && e.code === 'KeyR') {
-    location.reload();
     e.stopPropagation();
     e.preventDefault();
+
+    location.reload();
   }
   if (e.metaKey || e.ctrlKey) {
     if (e.code && e.code.startsWith('Digit')) {
@@ -558,41 +565,57 @@ window.addEventListener('keydown', e => {
       .map(a => a.dataset.tabId)
       .filter((s, i, l) => l.indexOf(s) === i)
       .map(Number);
+
     if (ids.length) {
       chrome.runtime.sendMessage({
         method: 'group',
         ids
-      });
-      window.close();
+      }, () => window.close());
     }
   }
   else if ((e.code === 'Enter' || e.code === 'NumpadEnter')) {
     e.preventDefault();
-    // fire Ctrl + 1
-    window.dispatchEvent(new KeyboardEvent('keydown', {
-      code: 'Digit1',
-      ctrlKey: true
-    }));
+    const n = document.querySelector(`.result input[type=radio]:checked + a`);
+    n.click();
   }
   else if (e.code === 'ArrowDown') {
     e.preventDefault();
-    const div = [...document.querySelectorAll('.result')].filter(e => {
-      return e.getBoundingClientRect().top > document.documentElement.clientHeight;
-    }).shift();
-    if (div) {
-      div.scrollIntoView({
-        block: 'end'
-      });
+
+    const es = [...document.querySelectorAll('.result input[type=radio]')];
+    const n = es.findIndex(e => e.checked);
+    if (n !== -1 && n !== es.length - 1) {
+      es[n + 1].checked = true;
+      const parent = es[n + 1].parentElement;
+      if (parent.getBoundingClientRect().bottom > document.documentElement.clientHeight) {
+        parent.scrollIntoView({
+          block: 'center'
+        });
+      }
+    }
+    else if (n === es.length - 1) {
+      es[0].checked = true;
+      window.scrollTo({top: 0, behavior: 'smooth'});
     }
   }
   else if (e.code === 'ArrowUp') {
     e.preventDefault();
-    const div = [...document.querySelectorAll('.result')].filter(e => {
-      return e.getBoundingClientRect().bottom < 0;
-    }).pop();
-    if (div) {
-      div.scrollIntoView({
-        block: 'start'
+
+    const es = [...document.querySelectorAll('.result input[type=radio]')];
+    const n = es.findIndex(e => e.checked);
+    if (n !== 0) {
+      es[n - 1].checked = true;
+      const parent = es[n - 1].parentElement;
+      if (parent.getBoundingClientRect().top < 0) {
+        parent.scrollIntoView({
+          block: 'center'
+        });
+      }
+    }
+    else if (n === 0) {
+      es[es.length - 1].checked = true;
+      const parent = es[es.length - 1].parentElement;
+      parent.scrollIntoView({
+        block: 'center'
       });
     }
   }
