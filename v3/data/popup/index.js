@@ -46,6 +46,7 @@ const index = (tab, scope = 'both', options = {}) => {
     url: tab.url,
     top: true
   };
+
   return Promise.race([new Promise(resolve => {
     chrome.scripting.executeScript({
       target: {
@@ -508,6 +509,11 @@ document.addEventListener('click', e => {
         url: chrome.runtime.getManifest().homepage_url
       });
     }
+    else if (cmd === 'shortcuts') {
+      chrome.tabs.create({
+        url: chrome.runtime.getManifest().homepage_url + '#faq25'
+      });
+    }
   }
 });
 
@@ -587,9 +593,7 @@ window.addEventListener('keydown', e => {
       es[n + 1].checked = true;
       const parent = es[n + 1].parentElement;
       if (parent.getBoundingClientRect().bottom > document.documentElement.clientHeight) {
-        parent.scrollIntoView({
-          block: 'center'
-        });
+        parent.scrollIntoView({block: 'center', behavior: 'smooth'});
       }
     }
     else if (n === es.length - 1) {
@@ -602,22 +606,38 @@ window.addEventListener('keydown', e => {
 
     const es = [...document.querySelectorAll('.result input[type=radio]')];
     const n = es.findIndex(e => e.checked);
-    if (n !== 0) {
+    if (n === 1) {
+      es[0].checked = true;
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+    else if (n !== 0) {
       es[n - 1].checked = true;
       const parent = es[n - 1].parentElement;
       if (parent.getBoundingClientRect().top < 0) {
-        parent.scrollIntoView({
-          block: 'center'
-        });
+        parent.scrollIntoView({block: 'center', behavior: 'smooth'});
       }
     }
     else if (n === 0) {
       es[es.length - 1].checked = true;
       const parent = es[es.length - 1].parentElement;
-      parent.scrollIntoView({
-        block: 'center'
-      });
+      parent.scrollIntoView({block: 'center', behavior: 'smooth'});
     }
+  }
+  else if (e.code === 'PageUp') {
+    e.preventDefault();
+
+    const es = [...document.querySelectorAll('.result input[type=radio]')];
+    es[0].checked = true;
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }
+  else if (e.code === 'PageDown') {
+    e.preventDefault();
+
+    const es = [...document.querySelectorAll('.result input[type=radio]')];
+    es[es.length - 1].checked = true;
+    const parent = es[es.length - 1].parentElement;
+    console.log(parent);
+    parent.scrollIntoView({block: 'center', behavior: 'smooth'});
   }
 });
 

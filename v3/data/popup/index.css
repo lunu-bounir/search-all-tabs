@@ -26,6 +26,7 @@
   --highlight-blue: #0071a2;
   --highlight-nocolor: inherit;
 }
+
 @media (prefers-color-scheme: dark) {
   :root {
     --bg-color: #35363a;
@@ -93,7 +94,8 @@ b {
   display: flex;
   align-items: center;
 }
-@media screen and (max-width: 500px)  {
+
+@media screen and (max-width: 500px) {
   #faqs {
     display: none;
   }
@@ -109,7 +111,8 @@ b {
   color: var(--search);
   background-color: var(--search-bg);
 }
-@media screen and (max-width: 500px)  {
+
+@media screen and (max-width: 500px) {
   #search {
     border: none;
     border-radius: 0;
@@ -137,12 +140,19 @@ b {
   border: none;
   outline: none;
 }
+#info-bar {
+  display: grid;
+  grid-template-columns: min-content min-content 1fr;
+  grid-gap: 10px;
+  padding: 0 20px;
+}
 #info {
   font-size: small;
   color: var(--info-bg);
-  padding: 0 30px;
-  display: flex;
-  justify-content: flex-end;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: right;
 }
 #results {
   overflow: auto;
@@ -170,18 +180,19 @@ b {
 }
 .result {
   margin: 10px 20px;
-  overflow: hidden;
 }
 .result input[type=radio] {
   display: none;
 }
 .result input[type=radio]:checked ~ a > h2::before {
   content: '';
-  width: 10px;
-  height: 10px;
-  background-color: var(--a);
-  border-radius: 50%;
-  margin-right: 5px;
+  margin-left: -12px;
+  margin-right: 7px;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 5px solid var(--a);
 }
 
 .result a {
@@ -226,7 +237,7 @@ body[data-engine=lunr] span[data-id="deep-search"] {
 }
 .result p {
   margin: 0;
-  color: var(--result-p)
+  color: var(--result-p);
 }
 .result p:empty::before {
   content: 'Preview is not supported for this entry';
@@ -234,7 +245,7 @@ body[data-engine=lunr] span[data-id="deep-search"] {
 .result img {
   width: 16px;
   margin-right: 5px;
-  background-color: var(--img-bg)
+  background-color: var(--img-bg);
 }
 .result h2 span[data-id="type"],
 .result h2 span[data-id="number"],

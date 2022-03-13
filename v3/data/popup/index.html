@@ -12,9 +12,6 @@
         <svg focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg>
       </button>
     </form>
-    <div id="faqs">
-      <a href="#" data-cmd="faqs">FAQs</a>
-    </div>
   </header>
   <template id="result">
     <div class="result">
@@ -43,11 +40,13 @@
       <li>Available keywords: <code>hostname</code>, <code>title</code>, <code>mime</code>, <code>url</code>, <code>date</code>, <code>filename</code>, <code>language</code>, <code>keyword</code>, <code>description</code></li>
       <li>Press ENTER key on the search box to switch to the first matched tab and close this window</li>
       <li>Press SHIFT + ENTER on the search box detach all the matching tabs and group them as a new window</li>
-      <li>Press CTRL + # or COMMAND + # on the search box to switch to the #th matched tab (# is between 1 to 9)</li>
-      <li>Press CTRL + D on the search box to copy all the URLs to the clipboard</li>
     </ul>
   </div>
-  <div id="info"></div>
+  <div id="info-bar">
+    <a href="#" data-cmd="faqs">FAQs</a>
+    <a href="#" data-cmd="shortcuts">Shortcuts</a>
+    <span id="info"></span>
+  </div>
   <div id="results" data-empty="Your search query is performed when indexing is over..."></div>
 
   <script src="parser/pdf.js"></script>
