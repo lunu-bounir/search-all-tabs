@@ -63,7 +63,8 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
     'max-content-length': 100 * 1024, // bytes
     'search-size': 30,
     'snippet-size': 300,
-    'highlight-color': 'orange'
+    'highlight-color': 'orange',
+    'open-mode': 'popup'
   }, prefs => {
     chrome.contextMenus.create({
       id: 'automatic-search',
@@ -438,6 +439,28 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
       checked: prefs['highlight-color'] === 'nocolor',
       parentId: 'highlight'
     });
+    chrome.contextMenus.create({
+      id: 'open-mode',
+      title: 'Open Mode',
+      contexts: ['action'],
+      parentId: 'options'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'open-mode:popup',
+      title: 'Popup',
+      contexts: ['action'],
+      checked: prefs['open-mode'] === 'popup',
+      parentId: 'open-mode'
+    });
+    chrome.contextMenus.create({
+      type: 'radio',
+      id: 'open-mode:tab',
+      title: 'Tab',
+      contexts: ['action'],
+      checked: prefs['open-mode'] === 'tab',
+      parentId: 'open-mode'
+    });
 
     chrome.contextMenus.create({
       id: 'preview',
@@ -501,9 +524,38 @@ chrome.contextMenus.onClicked.addListener(info => {
       'highlight-color': info.menuItemId.replace('highlight:', '')
     });
   }
+  else if (info.menuItemId.startsWith('open-mode:')) {
+    chrome.storage.local.set({
+      'open-mode': info.menuItemId.replace('open-mode:', '')
+    });
+  }
   else {
     chrome.storage.local.set({
       mode: info.menuItemId.replace('mode:', '')
+    });
+  }
+});
+
+/* action */
+chrome.action.onClicked.addListener(tab => chrome.tabs.create({
+  url: `data/popup/index.html?mode=tab`,
+  index: tab.index + 1
+}));
+{
+  const startup = () => chrome.storage.local.get({
+    'open-mode': 'popup'
+  }, prefs => {
+    chrome.action.setPopup({
+      popup: prefs['open-mode'] === 'popup' ? 'data/popup/index.html' : ''
+    });
+  });
+  chrome.runtime.onStartup.addListener(startup);
+  chrome.runtime.onInstalled.addListener(startup);
+}
+chrome.storage.onChanged.addListener(ps => {
+  if (ps['open-mode']) {
+    chrome.action.setPopup({
+      popup: ps['open-mode'].newValue === 'popup' ? 'data/popup/index.html' : ''
     });
   }
 });

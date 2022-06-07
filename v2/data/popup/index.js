@@ -246,6 +246,7 @@ document.getElementById('search').addEventListener('input', e => {
           for (let index = 0; index < size; index += 1) {
             const obj = await engine.search.body(index);
             const guid = engine.search.guid(index);
+            const percent = engine.search.percent(index);
             const clone = document.importNode(t.content, true);
             clone.querySelector('a').href = obj.url;
             Object.assign(clone.querySelector('a').dataset, {
@@ -253,7 +254,8 @@ document.getElementById('search').addEventListener('input', e => {
               windowId: obj.windowId,
               frameId: obj.frameId,
               index,
-              guid
+              guid,
+              percent
             });
             clone.querySelector('cite').textContent = obj.url;
             clone.querySelector('h2 span[data-id="number"]').textContent = '#' + (index + 1);
@@ -266,7 +268,6 @@ document.getElementById('search').addEventListener('input', e => {
               clone.querySelector('h2 span[data-id="type"]').textContent = 'iframe';
             }
             const code = clone.querySelector('h2 code');
-            const percent = engine.search.percent(index);
             code.textContent = percent + '%';
             if (percent > 80) {
               code.style['background-color'] = 'green';
@@ -417,34 +418,35 @@ document.addEventListener('click', e => {
 
 // keyboard shortcut
 window.addEventListener('keydown', e => {
-  if ((e.metaKey || e.ctrlKey) && e.code === 'KeyR') {
+  const meta = e.metaKey || e.ctrlKey;
+
+  if (meta && e.code === 'KeyR') {
     location.reload();
     e.stopPropagation();
     e.preventDefault();
   }
-  if (e.metaKey || e.ctrlKey) {
-    if (e.code && e.code.startsWith('Digit')) {
-      e.preventDefault();
-      const index = Number(e.code.replace('Digit', ''));
-      const n = document.querySelector(`[data-count="${index}"]`);
-      if (n) {
-        n.click();
-      }
-    }
-    else if (e.code === 'KeyD') {
-      e.preventDefault();
-      const links = [...document.querySelectorAll('[data-tab-id]')]
-        .map(a => a.href)
-        .filter((s, i, l) => l.indexOf(s) === i);
 
-      if (links.length) {
-        navigator.clipboard.writeText(links.join('\n')).catch(e => {
-          console.warn(e);
-          if (e) {
-            alert(links.join('\n'));
-          }
-        });
-      }
+  if (meta && e.code && e.code.startsWith('Digit')) {
+    e.preventDefault();
+    const index = Number(e.code.replace('Digit', ''));
+    const n = document.querySelector(`[data-count="${index}"]`);
+    if (n) {
+      n.click();
+    }
+  }
+  else if (meta && e.code === 'KeyD') {
+    e.preventDefault();
+    const links = [...document.querySelectorAll('[data-tab-id]')]
+      .map(a => a.href)
+      .filter((s, i, l) => l.indexOf(s) === i);
+
+    if (links.length) {
+      navigator.clipboard.writeText(links.join('\n')).catch(e => {
+        console.warn(e);
+        if (e) {
+          alert(links.join('\n'));
+        }
+      });
     }
   }
   else if (e.code === 'Escape' && e.target.value === '') {
@@ -454,6 +456,7 @@ window.addEventListener('keydown', e => {
   else if ((e.code === 'Enter' || e.code === 'NumpadEnter') && e.shiftKey) {
     e.preventDefault();
     const ids = [...document.querySelectorAll('[data-tab-id]')]
+      .filter(a => meta ? Number(a.dataset.percent) >= 80 : true)
       .map(a => a.dataset.tabId)
       .filter((s, i, l) => l.indexOf(s) === i)
       .map(Number);
@@ -461,8 +464,7 @@ window.addEventListener('keydown', e => {
       chrome.runtime.sendMessage({
         method: 'group',
         ids
-      });
-      window.close();
+      }, () => window.close());
     }
   }
   else if ((e.code === 'Enter' || e.code === 'NumpadEnter')) {

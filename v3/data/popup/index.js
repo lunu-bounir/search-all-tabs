@@ -7,9 +7,7 @@ const pdfjsLib = window['pdfjs-dist/build/pdf'];
 pdfjsLib.GlobalWorkerOptions.workerSrc = './parser/pdf.worker.js';
 
 const args = new URLSearchParams(location.search);
-if (args.get('mode') === 'sidebar') {
-  document.body.dataset.mode = 'sidebar';
-}
+document.body.dataset.mode = args.get('mode');
 
 let ready = false;
 let docs = 0;
@@ -159,7 +157,6 @@ document.addEventListener('engine-ready', async () => {
   }
   let tabs = await chrome.tabs.query(query);
   tabs.forEach(tab => cache[tab.id] = tab);
-
 
   // highlight
   document.documentElement.style.setProperty(
@@ -328,6 +325,7 @@ const search = query => {
           try {
             const guid = await engine.search.guid(index);
             const obj = engine.body(guid);
+            const percent = await engine.search.percent(index);
 
             const clone = document.importNode(t.content, true);
             clone.querySelector('a').href = obj.url;
@@ -336,7 +334,8 @@ const search = query => {
               windowId: obj.windowId,
               frameId: obj.frameId,
               index,
-              guid
+              guid,
+              percent
             });
             clone.querySelector('input[name=search]').checked = index == 0;
             clone.querySelector('cite').textContent = obj.url;
@@ -350,7 +349,7 @@ const search = query => {
               clone.querySelector('h2 span[data-id="type"]').textContent = 'iframe';
             }
             const code = clone.querySelector('h2 code');
-            const percent = await engine.search.percent(index);
+
             code.textContent = percent + '%';
             if (percent > 80) {
               code.style['background-color'] = 'green';
@@ -519,47 +518,47 @@ document.addEventListener('click', e => {
 
 // keyboard shortcut
 window.addEventListener('keydown', e => {
+  const meta = e.metaKey || e.ctrlKey;
+
   if (e.code === 'Tab') {
     e.preventDefault();
     const input = document.querySelector('#search input[type=search]');
     return input.focus();
   }
-  if ((e.metaKey || e.ctrlKey) && e.code === 'KeyR') {
+  if (meta && e.code === 'KeyR') {
     e.stopPropagation();
     e.preventDefault();
 
     location.reload();
   }
-  if (e.metaKey || e.ctrlKey) {
-    if (e.code && e.code.startsWith('Digit')) {
-      e.preventDefault();
-      const index = Number(e.code.replace('Digit', ''));
-      const n = document.querySelector(`[data-count="${index}"]`);
-      if (n) {
-        n.click();
-      }
+  if (meta && e.code && e.code.startsWith('Digit')) {
+    e.preventDefault();
+    const index = Number(e.code.replace('Digit', ''));
+    const n = document.querySelector(`[data-count="${index}"]`);
+    if (n) {
+      n.click();
     }
-    else if (e.code === 'KeyD') {
-      e.preventDefault();
-      const links = [...document.querySelectorAll('[data-tab-id]')]
-        .map(a => a.href)
-        .filter((s, i, l) => l.indexOf(s) === i);
+  }
+  else if (meta && e.code === 'KeyD') {
+    e.preventDefault();
+    const links = [...document.querySelectorAll('[data-tab-id]')]
+      .map(a => a.href)
+      .filter((s, i, l) => l.indexOf(s) === i);
 
-      if (links.length) {
-        navigator.clipboard.writeText(links.join('\n')).catch(e => {
-          console.warn(e);
-          if (e) {
-            alert(links.join('\n'));
-          }
-        });
-      }
+    if (links.length) {
+      navigator.clipboard.writeText(links.join('\n')).catch(e => {
+        console.warn(e);
+        if (e) {
+          alert(links.join('\n'));
+        }
+      });
     }
-    else if (e.code === 'KeyF') {
-      e.preventDefault();
-      const input = document.querySelector('#search input[type=search]');
-      input.focus();
-      input.select();
-    }
+  }
+  else if (meta && e.code === 'KeyF') {
+    e.preventDefault();
+    const input = document.querySelector('#search input[type=search]');
+    input.focus();
+    input.select();
   }
   else if (e.code === 'Escape' && e.target.value === '') {
     window.close();
@@ -567,7 +566,9 @@ window.addEventListener('keydown', e => {
   // extract all tabs into a new window
   else if ((e.code === 'Enter' || e.code === 'NumpadEnter') && e.shiftKey) {
     e.preventDefault();
+
     const ids = [...document.querySelectorAll('[data-tab-id]')]
+      .filter(a => meta ? Number(a.dataset.percent) >= 80 : true)
       .map(a => a.dataset.tabId)
       .filter((s, i, l) => l.indexOf(s) === i)
       .map(Number);

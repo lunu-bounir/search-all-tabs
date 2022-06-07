@@ -60,6 +60,10 @@ body {
 body[data-mode=sidebar] {
   width: 100%;
 }
+body[data-mode=tab] {
+  width: min(100% - 2rem, 1000px);
+  margin-inline: auto;
+}
 header {
   display: flex;
   justify-content: center;
