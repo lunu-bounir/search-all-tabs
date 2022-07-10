@@ -1,5 +1,5 @@
 :root {
-  --fg: #444;
+  --fg: #000;
   --bg-color: #fdfdfd;
   --code-bg: rgba(0, 0, 0, 0.05);
   --search: #4d5156;
@@ -30,7 +30,6 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --fg: #c5c5c5;
     --bg-color: #35363a;
     --search: #f0f3f4;
     --search-bg: #202124;
@@ -59,6 +58,7 @@ body {
   font-size: 13px;
   color: var(--fg);
   background-color: var(--bg-color);
+  max-height: 600px;
 }
 body[data-mode=sidebar] {
   width: 100%;
@@ -91,9 +91,6 @@ code {
 }
 b {
   color: var(--highlight-color);
-}
-button {
-  cursor: pointer;
 }
 
 [type=checkbox] {
@@ -183,6 +180,10 @@ button {
   grid-gap: 10px;
   padding: 0 20px;
 }
+body[data-size="0"][data-rate=true] #info-bar {
+  grid-template-columns: min-content min-content min-content min-content 1fr;
+}
+
 #info-bar div.select {
   white-space: nowrap;
 }
@@ -232,7 +233,7 @@ body[data-size="0"] #results::before {
   content: attr(data-empty);
 }
 body[data-size="0"] #results::before {
-  content: 'no match in your tabs!';
+  content: 'no match in your tabs or empty query!';
 }
 .result {
   margin: 10px 20px;
@@ -363,4 +364,21 @@ body[data-engine=lunr] span[data-id="deep-search"] {
 }
 .hidden {
   display: none !important;
+}
+
+.button {
+  height: 24px;
+  color: #444;
+  background-image: linear-gradient(rgb(237, 237, 237), rgb(237, 237, 237) 38%, rgb(222, 222, 222));
+  box-shadow: rgba(0, 0, 0, 0.08) 0 1px 0, rgba(255, 255, 255, 0.75) 0 1px 2px inset;
+  text-shadow: rgb(240, 240, 240) 0 1px 0;
+  border: solid 1px var(--search-border);
+}
+
+#rate {
+  white-space: nowrap;
+}
+body:not([data-size="0"]) #rate,
+#rate[data-hide=true] {
+  display: none;
 }

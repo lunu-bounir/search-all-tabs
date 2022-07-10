@@ -52,7 +52,7 @@ const index = (tab, scope = 'both', options = {}) => {
         allFrames: true
       },
       files: ['/data/collect.js']
-    }, arr => {
+    }).catch(() => []).then(arr => {
       chrome.runtime.lastError;
       arr = (arr || []).filter(a => a && a.result).map(a => a.result);
       arr = (arr && arr.length ? arr : [od]).map(o => {
@@ -398,7 +398,7 @@ document.getElementById('search').addEventListener('input', e => {
   }
   else {
     info.textContent = '';
-    delete document.body.dataset.size;
+    document.body.dataset.size = 0;
   }
   // save last query
   chrome.storage.local.set({query});
@@ -648,13 +648,16 @@ window.addEventListener('keydown', e => {
     if (n !== -1 && n !== es.length - 1) {
       es[n + 1].checked = true;
       const parent = es[n + 1].parentElement;
-      if (parent.getBoundingClientRect().bottom > document.documentElement.clientHeight) {
+      if (
+        parent.getBoundingClientRect().bottom > document.documentElement.clientHeight ||
+        parent.getBoundingClientRect().top < root.getBoundingClientRect().top
+      ) {
         parent.scrollIntoView({block: 'center', behavior: 'smooth'});
       }
     }
     else if (n === es.length - 1) {
       es[0].checked = true;
-      window.scrollTo({top: 0, behavior: 'smooth'});
+      root.scrollTo({top: 0, behavior: 'smooth'});
     }
   }
   else if (e.code === 'ArrowUp') {
@@ -664,12 +667,12 @@ window.addEventListener('keydown', e => {
     const n = es.findIndex(e => e.checked);
     if (n === 1) {
       es[0].checked = true;
-      window.scrollTo({top: 0, behavior: 'smooth'});
+      root.scrollTo({top: 0, behavior: 'smooth'});
     }
     else if (n !== 0) {
       es[n - 1].checked = true;
       const parent = es[n - 1].parentElement;
-      if (parent.getBoundingClientRect().top < 0) {
+      if (parent.getBoundingClientRect().top < root.getBoundingClientRect().top) {
         parent.scrollIntoView({block: 'center', behavior: 'smooth'});
       }
     }
@@ -684,7 +687,7 @@ window.addEventListener('keydown', e => {
 
     const es = [...document.querySelectorAll('.result input[type=radio]')];
     es[0].checked = true;
-    window.scrollTo({top: 0, behavior: 'smooth'});
+    root.scrollTo({top: 0, behavior: 'smooth'});
   }
   else if (e.code === 'PageDown') {
     e.preventDefault();
@@ -692,7 +695,6 @@ window.addEventListener('keydown', e => {
     const es = [...document.querySelectorAll('.result input[type=radio]')];
     es[es.length - 1].checked = true;
     const parent = es[es.length - 1].parentElement;
-    console.log(parent);
     parent.scrollIntoView({block: 'center', behavior: 'smooth'});
   }
 });
