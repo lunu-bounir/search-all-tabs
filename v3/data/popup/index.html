@@ -5,7 +5,7 @@
   <link rel="stylesheet" type="text/css" href="index.css">
   <title>Search all Tabs</title>
 </head>
-<body>
+<body data-size="0" data-menu=false>
   <header>
     <form id="search" role="search" aria-label="search all tabs">
       <input name="search" id="search" type="search" dir="auto" autofocus title="available keywords (hostname:, title:, mime:, url:, date:, filename:, language:, keyword:, description:)" placeholder="type your query">
@@ -22,6 +22,7 @@
           <img>
           <span data-id="title"></span>
           <span data-id="deep-search" title="Deep search: try to find more results in this document"></span>
+          <input type="checkbox" data-id="select">
           <span data-id="type" title="belongs to an iframe element"></span>
           <span data-id="number" title="Press Ctrl + #n or Command + #n to open"></span>
           <code></code>
@@ -44,9 +45,16 @@
     </ul>
   </div>
   <div id="info-bar">
-    <a href="#" data-cmd="faqs">FAQs</a>
-    <a href="#" data-cmd="shortcuts">Shortcuts</a>
+    <a href="#" data-cmd="faqs" title="Ctrl + Shift + F or Command + Shift + F"><u>F</u>AQs</a>
+    <a href="#" data-cmd="shortcuts" title="Ctrl + Shift + S or Command + Shift + S"><u>S</u>hortcuts</a>
+    <div class="select">
+      <a href="#" data-cmd="select-all" title="Ctrl + Shift + A or Command + Shift + A">Select <u>A</u>ll</a> / <a href="#" data-cmd="select-none" title="Ctrl + Shift + N or Command + Shift + N"><u>N</u>one</a>
+    </div>
     <span id="info"></span>
+    <div id="tools">
+      <button data-cmd="group" title="Ctrl + Shift + G or Command + Shift + G"><u>G</u>roup Tabs</button>
+      <button data-cmd="delete" title="Ctrl + Shift + C or Command + Shift + C"><u>C</u>lose Tabs</button>
+    </div>
   </div>
   <div id="results" data-empty="Your search query is performed when indexing is over..."></div>
 

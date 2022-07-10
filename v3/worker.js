@@ -31,6 +31,9 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
     response(cache[sender.tab.id]);
     cache[sender.tab.id];
   }
+  else if (request.method === 'delete') {
+    chrome.tabs.remove(request.ids);
+  }
   else if (request.method === 'group') {
     const tabId = request.ids.shift();
     chrome.windows.create({

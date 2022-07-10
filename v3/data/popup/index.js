@@ -308,7 +308,7 @@ const search = query => {
           length: prefs['search-size']
         });
 
-        root.dataset.size = size;
+        document.body.dataset.size = size;
 
         if (size === 0) {
           info.textContent = '';
@@ -398,7 +398,7 @@ document.getElementById('search').addEventListener('input', e => {
   }
   else {
     info.textContent = '';
-    delete root.dataset.size;
+    delete document.body.dataset.size;
   }
   // save last query
   chrome.storage.local.set({query});
@@ -480,6 +480,10 @@ const deep = async a => {
 document.addEventListener('click', e => {
   const a = e.target.closest('[data-cmd]');
 
+  if (e.target.dataset.id === 'select') {
+    return;
+  }
+
   if (e.target.dataset.id === 'deep-search') {
     e.preventDefault();
     e.target.textContent = '';
@@ -513,6 +517,25 @@ document.addEventListener('click', e => {
         url: chrome.runtime.getManifest().homepage_url + '#faq25'
       });
     }
+    else if (cmd === 'select-all') {
+      [...document.querySelectorAll('.result [data-id="select"]')].forEach(e => e.checked = true);
+      document.dispatchEvent(new Event('change'));
+    }
+    else if (cmd === 'select-none') {
+      [...document.querySelectorAll('.result [data-id="select"]')].forEach(e => e.checked = false);
+      document.dispatchEvent(new Event('change'));
+    }
+    else if (cmd === 'group' || cmd === 'delete') {
+      const ids = [...document.querySelectorAll('#results [data-id=select]:checked')]
+        .map(e => e.closest('a').dataset.tabId)
+        .filter((s, i, l) => l.indexOf(s) === i)
+        .map(Number);
+
+      chrome.runtime.sendMessage({
+        method: cmd,
+        ids
+      }, () => window.close());
+    }
   }
 });
 
@@ -539,6 +562,30 @@ window.addEventListener('keydown', e => {
       n.click();
     }
   }
+  else if (meta && e.shiftKey && e.code === 'KeyA') {
+    e.preventDefault();
+    document.querySelector('[data-cmd=select-all]').click();
+  }
+  else if (meta && e.shiftKey && e.code === 'KeyF') {
+    e.preventDefault();
+    document.querySelector('[data-cmd=faqs]').click();
+  }
+  else if (meta && e.shiftKey && e.code === 'KeyS') {
+    e.preventDefault();
+    document.querySelector('[data-cmd=shortcuts]').click();
+  }
+  else if (meta && e.shiftKey && e.code === 'KeyC') {
+    e.preventDefault();
+    document.querySelector('[data-cmd=delete]').click();
+  }
+  else if (meta && e.shiftKey && e.code === 'KeyG') {
+    e.preventDefault();
+    document.querySelector('[data-cmd=group]').click();
+  }
+  else if (meta && e.shiftKey && e.code === 'KeyN') {
+    e.preventDefault();
+    document.querySelector('[data-cmd=select-none]').click();
+  }
   else if (meta && e.code === 'KeyD') {
     e.preventDefault();
     const links = [...document.querySelectorAll('[data-tab-id]')]
@@ -562,6 +609,14 @@ window.addEventListener('keydown', e => {
   }
   else if (e.code === 'Escape' && e.target.value === '') {
     window.close();
+  }
+  else if (e.code === 'Space' && e.shiftKey) {
+    e.preventDefault();
+    const i = document.querySelector('.result input[type=radio]:checked');
+
+    if (i) {
+      i.closest('div').querySelector('[data-id=select]').click();
+    }
   }
   // extract all tabs into a new window
   else if ((e.code === 'Enter' || e.code === 'NumpadEnter') && e.shiftKey) {
@@ -697,4 +752,9 @@ chrome.storage.local.get({
   console.info('I am using', prefs.engine, 'engine');
   document.body.dataset.engine = prefs.engine;
   document.body.appendChild(s);
+});
+
+// select results
+document.addEventListener('change', () => {
+  document.body.dataset.menu = Boolean(document.querySelector('#results [data-id="select"]:checked'));
 });
