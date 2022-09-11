@@ -7,6 +7,7 @@ This extension provides a powerful content searching tool for you to easily find
 
 ### Links
   * FAQs Page: https://add0n.com/search-all-tabs.html
+  * Review: https://webextension.org/blog/2022/04/17/search-all-tabs-extension.html
   * Chrome: https://chrome.google.com/webstore/detail/search-all-tabs/ndfnfhnlgoocpbbjjjfmiojdfcgcfomn
   * Firefox: https://addons.mozilla.org/en-US/firefox/addon/search-all-tabs/
   * Edge: https://microsoftedge.microsoft.com/addons/detail/search-all-tabs/ggebacfnckaalgfmddgfcokohadkbnmm
