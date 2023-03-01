@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "version": "0.4.9",
+  "version": "0.5.0",
   "name": "Search all Tabs",
   "description": "__MSG_description__",
   "default_locale": "en",
@@ -14,7 +14,7 @@
      "512": "data/icons/512.png"
   },
   "offline_enabled": true,
-  "homepage_url": "https://add0n.com/search-all-tabs.html",
+  "homepage_url": "https://webextension.org/listing/search-all-tabs.html",
   "permissions": [
     "storage",
     "contextMenus",
@@ -36,9 +36,7 @@
      "pages": ["data/xapian/sandbox/index.html"]
   },
   "commands": {
-    "_execute_action": {
-      "description": "Open the popup view with a shortcut"
-    },
+    "_execute_action": {},
     "_execute_sidebar_action": {
       "description": "Open the sidebar view with a shortcut"
     }
