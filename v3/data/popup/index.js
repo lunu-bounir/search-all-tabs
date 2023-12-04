@@ -178,9 +178,7 @@ document.addEventListener('engine-ready', async () => {
     });
   }
 
-  let docs = 0;
-  const length = 5;
-  const d = Date.now();
+  const length = 5; // number of simultaneous indexers
   for (let n = 0; n < tabs.length; n += length) {
     root.dataset.empty = `Indexing ${n + 1} of ${tabs.length} tabs. Please wait...`;
 
@@ -210,7 +208,6 @@ document.addEventListener('engine-ready', async () => {
       }
     }
   }
-  console.log(Date.now() - d);
 
   if (docs === 0) {
     root.dataset.empty = 'Nothing to index. You need to have some tabs open.';
@@ -418,7 +415,8 @@ document.getElementById('search').addEventListener('input', e => {
 
 const deep = async a => {
   const guid = a.dataset.guid;
-  const data = engine.body(guid);
+  const data = await engine.body(guid);
+
   await engine.new(1, 'one-tab');
 
   const prefs = await new Promise(resolve => chrome.storage.local.get({
@@ -493,6 +491,15 @@ document.addEventListener('click', e => {
   const a = e.target.closest('[data-cmd]');
 
   if (e.target.dataset.id === 'select') {
+    if (/Firefox/.test(navigator.userAgent)) {
+      setTimeout(() => {
+        e.target.checked = !e.target.checked;
+        e.target.dispatchEvent(new Event('change', {
+          bubbles: true
+        }));
+      });
+      e.preventDefault();
+    }
     return;
   }
 

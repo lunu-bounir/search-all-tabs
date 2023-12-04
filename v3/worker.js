@@ -79,10 +79,14 @@ chrome.storage.onChanged.addListener(ps => {
 });
 
 /* clear database */
+indexedDB.databases = indexedDB.databases = () => Promise.resolve([{ // Firefox
+  name: 'object-storage'
+}]);
 chrome.runtime.onConnect.addListener(port => {
   port.onDisconnect.addListener(() => {
     indexedDB.databases().then(databaseList => {
       for (const {name} of databaseList) {
+        console.log(name);
         indexedDB.deleteDatabase(name);
       }
     });

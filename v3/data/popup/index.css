@@ -40,7 +40,7 @@
     --a: #4389e2;
     --a-visited: #c1768a;
     --result-type-bg: #3c5863;
-    --guide-bg: #aeb9ac;
+    --guide-bg: #282828;
     --guide-border: #6e6f72;
     --highlight-green: #00902f;
     --highlight-orange: #ca9100;
@@ -67,6 +67,7 @@ body[data-mode=sidebar] {
 body[data-mode=tab] {
   width: min(100% - 2rem, 1000px);
   margin-inline: auto;
+  max-height: 100vh;
 }
 header {
   display: flex;
