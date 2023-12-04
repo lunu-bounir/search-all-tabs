@@ -30,6 +30,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --fg: #b1b1b1;
     --bg-color: #35363a;
     --search: #f0f3f4;
     --search-bg: #202124;

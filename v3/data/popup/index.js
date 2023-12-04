@@ -63,7 +63,7 @@ const index = (tab, scope = 'both', options = {}) => {
       // support parsing PDF files
       let parse = false;
       if (options['parse-pdf'] === true) {
-        if (arr && tab.url && (arr[0].mime === 'application/pdf' || tab.url.indexOf('.pdf') !== -1)) {
+        if (arr && tab.url && (arr[0].mime === 'application/pdf' || tab.url.includes('.pdf'))) {
           if (scope === 'both' || scope === 'body') {
             parse = true;
           }
@@ -178,30 +178,40 @@ document.addEventListener('engine-ready', async () => {
     });
   }
 
-  let memory = false;
-  docs = (await Promise.all(tabs.map(tab => index(tab, prefs.scope, {
-    'parse-pdf': prefs['parse-pdf'],
-    'fetch-timeout': prefs['fetch-timeout'],
-    'max-content-length': prefs['max-content-length']
-  })))).reduce((p, c) => {
-    if (c === 0 || c === -1) {
-      ignored += 1;
-    }
-    if (c === -1) {
-      memory = true;
-      return p;
-    }
-    else {
-      return p + c;
-    }
-  }, 0);
+  let docs = 0;
+  const length = 5;
+  const d = Date.now();
+  for (let n = 0; n < tabs.length; n += length) {
+    root.dataset.empty = `Indexing ${n + 1} of ${tabs.length} tabs. Please wait...`;
 
-  if (memory) {
-    alert(`Your browser's memory limit for indexing content reached.
+    const pt = Array.from({
+      length
+    }, (_, m) => tabs[n + m]).filter(a => a);
+    const cs = await Promise.all(pt.map(tab => index(tab, prefs.scope, {
+      'parse-pdf': prefs['parse-pdf'],
+      'fetch-timeout': prefs['fetch-timeout'],
+      'max-content-length': prefs['max-content-length']
+    }).then(c => {
+      if (c === -1) {
+        alert(`Your browser's memory limit for indexing content reached.
 
-Right-click on the toolbar button and reduce the "Maximum Size of Each Content" option and retry.`);
-    window.close();
+  Right-click on the toolbar button and reduce the "Maximum Size of Each Content" option and retry.`);
+        window.close();
+      }
+      return c;
+    })));
+
+    for (const c of cs) {
+      if (c === 0 || c === -1) {
+        ignored += 1;
+      }
+      else {
+        docs += c;
+      }
+    }
   }
+  console.log(Date.now() - d);
+
   if (docs === 0) {
     root.dataset.empty = 'Nothing to index. You need to have some tabs open.';
   }
@@ -212,6 +222,7 @@ Right-click on the toolbar button and reduce the "Maximum Size of Each Content" 
     }
   }
   ready = true;
+
   // do we have anything to search
   const input = document.querySelector('#search input[type=search]');
   if (input.value) {
@@ -324,7 +335,8 @@ const search = query => {
           }
           try {
             const guid = await engine.search.guid(index);
-            const obj = engine.body(guid);
+            const obj = await engine.body(guid);
+
             const percent = await engine.search.percent(index);
 
             const clone = document.importNode(t.content, true);
@@ -341,7 +353,7 @@ const search = query => {
             clone.querySelector('cite').textContent = obj.url;
             clone.querySelector('h2 span[data-id="number"]').textContent = '#' + (index + 1);
             clone.querySelector('h2').title = clone.querySelector('h2 span[data-id="title"]').textContent = obj.title;
-            clone.querySelector('h2 img').src = obj.favIconUrl || cache[obj.tabId].favIconUrl || 'chrome://favicon/' + obj.url;
+            clone.querySelector('h2 img').src = obj.favIconUrl || cache[obj.tabId]?.favIconUrl || 'chrome://favicon/' + obj.url;
             clone.querySelector('h2 img').onerror = e => {
               e.target.src = 'web.svg';
             };
@@ -398,7 +410,7 @@ document.getElementById('search').addEventListener('input', e => {
   }
   else {
     info.textContent = '';
-    document.body.dataset.size = 0;
+    document.body.dataset.size = ready ? 0 : -1;
   }
   // save last query
   chrome.storage.local.set({query});
@@ -760,3 +772,6 @@ chrome.storage.local.get({
 document.addEventListener('change', () => {
   document.body.dataset.menu = Boolean(document.querySelector('#results [data-id="select"]:checked'));
 });
+
+// close
+chrome.runtime.connect({name: 'popup'});

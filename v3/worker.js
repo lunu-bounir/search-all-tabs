@@ -16,14 +16,14 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
     chrome.storage.local.get({
       strict: false
     }, prefs => {
-      if (request.snippet && (request.snippet.indexOf('<b>') !== -1 || prefs.strict)) {
+      if (request.snippet && (request.snippet.includes('<b>') || prefs.strict)) {
         cache[request.tabId] = request;
         chrome.scripting.executeScript({
           target: {
             tabId: request.tabId,
             allFrames: true
           },
-          files: ['data/highlight.js']
+          files: ['/data/highlight.js']
         }, () => chrome.runtime.lastError);
       }
       response();
@@ -56,7 +56,7 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
 
 /* action */
 chrome.action.onClicked.addListener(tab => chrome.tabs.create({
-  url: `data/popup/index.html?mode=tab`,
+  url: `/data/popup/index.html?mode=tab`,
   index: tab.index + 1
 }));
 {
@@ -64,7 +64,7 @@ chrome.action.onClicked.addListener(tab => chrome.tabs.create({
     'open-mode': 'popup'
   }, prefs => {
     chrome.action.setPopup({
-      popup: prefs['open-mode'] === 'popup' ? 'data/popup/index.html' : ''
+      popup: prefs['open-mode'] === 'popup' ? '/data/popup/index.html' : ''
     });
   });
   chrome.runtime.onStartup.addListener(startup);
@@ -73,9 +73,20 @@ chrome.action.onClicked.addListener(tab => chrome.tabs.create({
 chrome.storage.onChanged.addListener(ps => {
   if (ps['open-mode']) {
     chrome.action.setPopup({
-      popup: ps['open-mode'].newValue === 'popup' ? 'data/popup/index.html' : ''
+      popup: ps['open-mode'].newValue === 'popup' ? '/data/popup/index.html' : ''
     });
   }
+});
+
+/* clear database */
+chrome.runtime.onConnect.addListener(port => {
+  port.onDisconnect.addListener(() => {
+    indexedDB.databases().then(databaseList => {
+      for (const {name} of databaseList) {
+        indexedDB.deleteDatabase(name);
+      }
+    });
+  });
 });
 
 /* FAQs & Feedback */
