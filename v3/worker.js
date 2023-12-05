@@ -2,6 +2,8 @@
 
 self.importScripts('context.js');
 
+const isFF = /Firefox/.test(navigator.userAgent);
+
 const cache = {};
 chrome.tabs.onRemoved.addListener(tabId => delete cache[tabId]);
 
@@ -26,8 +28,13 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
           files: ['/data/highlight.js']
         }, () => chrome.runtime.lastError);
       }
-      response();
+      try {
+        response();
+      }
+      catch (e) {}
     });
+
+    return true;
   }
   else if (request.method === 'get') {
     response(cache[sender.tab.id]);
@@ -79,19 +86,43 @@ chrome.storage.onChanged.addListener(ps => {
 });
 
 /* clear database */
-indexedDB.databases = indexedDB.databases = () => Promise.resolve([{ // Firefox
-  name: 'object-storage'
-}]);
-chrome.runtime.onConnect.addListener(port => {
-  port.onDisconnect.addListener(() => {
-    indexedDB.databases().then(databaseList => {
-      for (const {name} of databaseList) {
-        console.log(name);
-        indexedDB.deleteDatabase(name);
+if (indexedDB.databases === undefined) {
+  indexedDB.databases = function() {
+    return new Promise(resolve => {
+      const dbs = [];
+      for (const [name, value] of Object.entries(localStorage)) {
+        if (value === 'idb') {
+          dbs.push({name});
+        }
       }
+      resolve(dbs);
     });
+  };
+  indexedDB.deleteDatabase = new Proxy(indexedDB.deleteDatabase, {
+    apply(target, self, args) {
+      localStorage.removeItem(args[0]);
+      return Reflect.apply(target, self, args);
+    }
+  });
+}
+chrome.runtime.onConnect.addListener(port => {
+  if (isFF) {
+    localStorage.setItem(port.name, 'idb');
+  }
+  port.onDisconnect.addListener(() => {
+    indexedDB.deleteDatabase(port.name);
   });
 });
+// remove all remaining databases on startup
+{
+  const once = async () => {
+    for (const {name} of await indexedDB.databases()) {
+      indexedDB.deleteDatabase(name);
+    }
+  };
+  chrome.runtime.onInstalled.addListener(once);
+  chrome.runtime.onStartup.addListener(once);
+}
 
 /* FAQs & Feedback */
 {

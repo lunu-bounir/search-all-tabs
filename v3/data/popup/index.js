@@ -1,7 +1,9 @@
-/* globals engine */
+/* global engine */
 'use strict';
 
 // Tests => PDF, discarded tab, about:blank, chrome://extensions/, google, webstore
+
+const isFirefox = navigator.userAgent.includes('Firefox');
 
 const pdfjsLib = window['pdfjs-dist/build/pdf'];
 pdfjsLib.GlobalWorkerOptions.workerSrc = './parser/pdf.worker.js';
@@ -104,7 +106,7 @@ const index = (tab, scope = 'both', options = {}) => {
         }
         const favIconUrl = tab.favIconUrl || o.favIconUrl || cache[tab.id].favIconUrl;
         if (favIconUrl) {
-          cache[tab.id].favIconUrl = o.title;
+          cache[tab.id].favIconUrl = favIconUrl;
         }
         if (scope === 'body') {
           o.title = '';
@@ -350,10 +352,13 @@ const search = query => {
             clone.querySelector('cite').textContent = obj.url;
             clone.querySelector('h2 span[data-id="number"]').textContent = '#' + (index + 1);
             clone.querySelector('h2').title = clone.querySelector('h2 span[data-id="title"]').textContent = obj.title;
-            clone.querySelector('h2 img').src = obj.favIconUrl || cache[obj.tabId]?.favIconUrl || 'chrome://favicon/' + obj.url;
             clone.querySelector('h2 img').onerror = e => {
               e.target.src = 'web.svg';
             };
+            clone.querySelector('h2 img').src = obj.favIconUrl || cache[obj.tabId]?.favIconUrl || (isFirefox ?
+              ('chrome://favicon/' + obj.url) :
+              `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(obj.url)}&size=32`
+            );
             if (!obj.top) {
               clone.querySelector('h2 span[data-id="type"]').textContent = 'iframe';
             }
@@ -417,7 +422,7 @@ const deep = async a => {
   const guid = a.dataset.guid;
   const data = await engine.body(guid);
 
-  await engine.new(1, 'one-tab');
+  await engine.new(1, 'deep-search');
 
   const prefs = await new Promise(resolve => chrome.storage.local.get({
     'snippet-size': 300,
@@ -657,7 +662,9 @@ window.addEventListener('keydown', e => {
   else if ((e.code === 'Enter' || e.code === 'NumpadEnter')) {
     e.preventDefault();
     const n = document.querySelector(`.result input[type=radio]:checked + a`);
-    n.click();
+    if (n) {
+      n.click();
+    }
   }
   else if (e.code === 'ArrowDown') {
     e.preventDefault();
@@ -705,16 +712,20 @@ window.addEventListener('keydown', e => {
     e.preventDefault();
 
     const es = [...document.querySelectorAll('.result input[type=radio]')];
-    es[0].checked = true;
-    root.scrollTo({top: 0, behavior: 'smooth'});
+    if (es) {
+      es[0].checked = true;
+      root.scrollTo({top: 0, behavior: 'smooth'});
+    }
   }
   else if (e.code === 'PageDown') {
     e.preventDefault();
 
     const es = [...document.querySelectorAll('.result input[type=radio]')];
-    es[es.length - 1].checked = true;
-    const parent = es[es.length - 1].parentElement;
-    parent.scrollIntoView({block: 'center', behavior: 'smooth'});
+    if (es.length) {
+      es[es.length - 1].checked = true;
+      const parent = es[es.length - 1].parentElement;
+      parent.scrollIntoView({block: 'center', behavior: 'smooth'});
+    }
   }
 });
 
@@ -769,6 +780,13 @@ chrome.storage.local.get({
   engine: 'xapian'
 }, prefs => {
   const s = document.createElement('script');
+  s.onload = () => { // delete database on close
+    if (prefs.engine === 'xapian') {
+      chrome.runtime.connect({
+        name: engine.name
+      });
+    }
+  };
   s.src = '../' + prefs.engine + '/connect.js';
   console.info('I am using', prefs.engine, 'engine');
   document.body.dataset.engine = prefs.engine;
@@ -780,5 +798,3 @@ document.addEventListener('change', () => {
   document.body.dataset.menu = Boolean(document.querySelector('#results [data-id="select"]:checked'));
 });
 
-// close
-chrome.runtime.connect({name: 'popup'});

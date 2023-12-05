@@ -1,7 +1,9 @@
 /* global UTF8ToString */
 'use strict';
 
-const xapian = {};
+const xapian = {
+  name: 'object-storage-' + (Math.random() + 1).toString(36).substring(7)
+};
 
 // eslint-disable-next-line no-var
 var Module = {};
@@ -59,8 +61,7 @@ Module['onRuntimeInitialized'] = () => {
         }
       }
       catch (e) {
-        console.log(e);
-
+        console.error(e);
         reject(e);
       }
     };
@@ -126,7 +127,7 @@ Module['onRuntimeInitialized'] = () => {
   // open database in IDBFS or MEMFS state
   xapian.new(0, '/database');
   // object storage
-  const request = indexedDB.open('object-storage', 1);
+  const request = indexedDB.open(xapian.name, 1);
   request.onupgradeneeded = () => {
     const db = request.result;
 

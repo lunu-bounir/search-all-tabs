@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "version": "0.5.0",
+  "version": "0.5.1",
   "name": "Search all Tabs",
   "description": "__MSG_description__",
   "default_locale": "en",
@@ -19,6 +19,7 @@
     "storage",
     "contextMenus",
     "scripting",
+    "favicon",
     "unlimitedStorage"
   ],
   "host_permissions": [

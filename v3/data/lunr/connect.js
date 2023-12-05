@@ -13,10 +13,10 @@ const engine = window.engine = {
     const idx = engine.idx[lang] || lunr(function() {
       if (lang in lunr) {
         this.use(lunr[lang]);
-        console.log('use', lang);
+        console.info('lunr language', lang);
       }
       else {
-        console.log('use EN');
+        console.info('lunr language', 'EN');
       }
 
       this.ref('guid');
