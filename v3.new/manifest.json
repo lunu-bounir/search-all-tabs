@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "version": "0.5.1",
+  "name": "Search all Tabs",
+  "description": "__MSG_description__",
+  "default_locale": "en",
+  "icons": {
+     "16": "/data/icons/16.png",
+     "32": "/data/icons/32.png",
+     "48": "/data/icons/48.png",
+     "64": "/data/icons/64.png",
+     "128": "/data/icons/128.png",
+     "256": "/data/icons/256.png",
+     "512": "/data/icons/512.png"
+  },
+  "offline_enabled": true,
+  "homepage_url": "https://webextension.org/listing/search-all-tabs.html",
+  "permissions": [
+    "storage",
+    "contextMenus",
+    "scripting",
+    "favicon",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "optional_permissions": [
+    "tabs"
+  ],
+  "action": {
+    "default_popup": "/data/popup/index.html"
+  },
+  "background": {
+    "service_worker": "worker.js",
+    "scripts": [
+      "context.js",
+      "worker.js"
+    ]
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
+  "commands": {
+    "_execute_action": {}
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{76b6ec7e-5411-4d36-9aa5-2bb08e31c27e}",
+      "strict_min_version": "128.0"
+    }
+  }
+}

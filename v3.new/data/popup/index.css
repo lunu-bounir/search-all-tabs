@@ -1,0 +1,387 @@
+:root {
+  --fg: #000;
+  --bg-color: #fdfdfd;
+  --code-bg: rgba(0, 0, 0, 0.05);
+  --search: #4d5156;
+  --search-bg: #fff;
+  --search-border: #dfe1e5;
+  --search-border-active: rgba(223, 225, 229, 0);
+  --search-fill: #3e85f4;
+  --info-bg: #808080;
+  --empty-results: #808080;
+  --empty-results-border: #eee;
+  --result-cite: #006621;
+  --result-span: #fff;
+  --result-p: #4d5156;
+  --result-type-bg: #658a98;
+  --guide-bg: #f6fff5;
+  --guide-border: #dadada;
+  --a: #1a0dab;
+  --a-visited: #609;
+  --img-bg: #fff;
+  --highlight-color: #948080;
+  --highlight-green: #006621;
+  --highlight-orange: #e88b35;
+  --highlight-pink: #609;
+  --highlight-yellow: #a09600;
+  --highlight-blue: #0071a2;
+  --highlight-nocolor: inherit;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #b1b1b1;
+    --bg-color: #35363a;
+    --search: #f0f3f4;
+    --search-bg: #202124;
+    --search-border: #6e6f72;
+    --result-cite: #00902f;
+    --result-p: #b1b1b1;
+    --a: #4389e2;
+    --a-visited: #c1768a;
+    --result-type-bg: #3c5863;
+    --guide-bg: #282828;
+    --guide-border: #6e6f72;
+    --highlight-green: #00902f;
+    --highlight-orange: #ca9100;
+    --highlight-pink: #c1768a;
+    --highlight-yellow: #f5eb61;
+    --highlight-blue: #acdaee;
+  }
+}
+
+body {
+  width: 700px;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-family: "Helvetica Neue", Helvetica, sans-serif;
+  font-size: 13px;
+  color: var(--fg);
+  background-color: var(--bg-color);
+  max-height: 600px;
+}
+body[data-mode=sidebar] {
+  width: 100%;
+}
+body[data-mode=tab] {
+  width: min(100% - 2rem, 1000px);
+  margin-inline: auto;
+  max-height: 100vh;
+}
+header {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 20px 0;
+  position: relative;
+}
+a {
+  text-decoration: none;
+  color: var(--a);
+}
+a:visited {
+  color: var(--a-visited);
+}
+h2 {
+  font-weight: 400;
+  margin: 0;
+}
+code {
+  background-color: var(--code-bg);
+  padding: 1px 2px;
+}
+b {
+  color: var(--highlight-color);
+}
+
+[type=checkbox] {
+  width: 30px;
+  height: 15px;
+  background-color: var(--info-bg);
+  -webkit-appearance: none;
+  border: 0;
+  outline: 0;
+  transition: background 300ms;
+  cursor: pointer;
+  margin: 0;
+}
+[type=checkbox]::before {
+  content: "";
+  display: block;
+  width: inherit;
+  height: inherit;
+  background-size: contain;
+  box-shadow: inset 0 0 0 1px #ccd3d8;
+  box-shadow: none;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E %3Cpath d='M15.88 8.29L10 14.17l-1.88-1.88a.996.996 0 1 0-1.41 1.41l2.59 2.59c.39.39 1.02.39 1.41 0L17.3 9.7a.996.996 0 0 0 0-1.41c-.39-.39-1.03-.39-1.42 0z' fill='%23fff'/%3E %3C/svg%3E");
+}
+[type=checkbox]:checked {
+  background-color: dodgerblue;
+}
+
+#faqs {
+  position: absolute;
+  right: 20px;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+@media screen and (max-width: 500px) {
+  #faqs {
+    display: none;
+  }
+}
+#search {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--search-border);
+  height: 44px;
+  width: 500px;
+  border-radius: 24px;
+  overflow: hidden;
+  color: var(--search);
+  background-color: var(--search-bg);
+}
+
+@media screen and (max-width: 500px) {
+  #search {
+    border: none;
+    border-radius: 0;
+  }
+}
+#search:hover {
+  box-shadow: 0 1px 6px 0 rgba(32, 33, 36, 0.28);
+  border-color: var(--search-border-active);
+}
+#search input[type=search] {
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  padding-left: 20px;
+  outline: none;
+}
+#search button[type=submit] {
+  fill: var(--search-fill);
+  height: 28px;
+  width: 28px;
+  min-width: 18px;
+  padding: 0 10px;
+  box-sizing: content-box;
+  background-color: transparent;
+  border: none;
+  outline: none;
+}
+#info-bar {
+  display: grid;
+  grid-template-columns: min-content min-content min-content 1fr;
+  grid-gap: 10px;
+  padding: 0 20px;
+}
+body[data-size="0"][data-rate=true] #info-bar {
+  grid-template-columns: min-content min-content min-content min-content 1fr;
+}
+
+#info-bar div.select {
+  white-space: nowrap;
+}
+
+body[data-size="0"] #info-bar .select {
+  visibility: hidden;
+}
+
+#info {
+  font-size: small;
+  color: var(--info-bg);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+body[data-menu=true] #info {
+  display: none;
+}
+
+#tools {
+  text-align: right;
+}
+body[data-menu=false] #tools {
+  display: none;
+}
+
+#results {
+  overflow: auto;
+  margin: 10px 0 20px 0;
+  flex: 1;
+}
+#results:not(:empty) {
+  border-top: solid 1px var(--empty-results-border);
+}
+#results:empty::before,
+body[data-size="0"] #results::before {
+  display: flex;
+  width: calc(100% - 30px);
+  padding: 0 15px;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  color: var(--empty-results);
+}
+#results:empty::before {
+  content: attr(data-empty);
+}
+body[data-size="0"] #results::before {
+  content: 'no match in your tabs or empty query!';
+}
+.result {
+  margin: 10px 20px;
+}
+.result input[type=radio] {
+  display: none;
+}
+.result input[type=radio]:checked ~ a > h2::before {
+  content: '';
+  margin-left: -12px;
+  margin-right: -3px;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 5px solid var(--a);
+}
+
+.result a {
+  user-select: none;
+}
+.result a h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.result.sub a h2 {
+  font-size: 100%;
+}
+.result a h2 span[data-id="deep-search"] {
+  width: 16px;
+  height: 16px;
+  background: url(more.svg) center center no-repeat;
+  background-size: 16px;
+}
+.result a h2 span[data-id="deep-search"].done {
+  display: none;
+}
+body[data-engine=lunr] span[data-id="deep-search"] {
+  display: none;
+}
+.result a:hover h2 span[data-id="title"] {
+  text-decoration: underline;
+}
+.result a h2 span[data-id="title"] {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.result a cite {
+  color: var(--result-cite);
+  font-style: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  width: 100%;
+}
+.result p {
+  margin: 0;
+  color: var(--result-p);
+  word-break: break-all;
+}
+.result p:empty::before {
+  content: 'Preview is not supported for this entry';
+}
+.result img {
+  width: 16px;
+  background-color: var(--img-bg);
+}
+.result h2 span[data-id="type"],
+.result h2 span[data-id="number"],
+.result h2 code {
+  color: var(--result-span);
+  padding: 1px 5px;
+  font-size: 11px;
+  font-family: arial, sans-serif;
+  text-align: center;
+}
+.result h2 code {
+  min-width: 32px;
+}
+.result h2 span[data-id="type"]:empty {
+  display: none;
+}
+.result h2 span[data-id="type"] {
+  background-color: var(--result-type-bg);
+}
+.result h2 span[data-id="number"] {
+  min-width: 20px;
+  background-color: gray;
+}
+#internal,
+#guide {
+  background-color: var(--guide-bg);
+  border: solid 1px var(--guide-border);
+  border-left: none;
+  border-right: none;
+  margin-bottom: 10px;
+  position: relative;
+  padding: 10px;
+}
+#internal-close,
+#guide-close {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  font-size: 20px;
+  cursor: pointer;
+}
+#guide ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+#guide li:not(:last-child) {
+  margin-bottom: 5px;
+}
+#internal {
+  display: grid;
+  grid-template-columns: 1fr min-content;
+  align-items: center;
+}
+#internal input[type=submit] {
+  float: right;
+  margin-right: 30px;
+  cursor: pointer;
+}
+.hidden {
+  display: none !important;
+}
+
+.button {
+  height: 24px;
+  color: #444;
+  background-image: linear-gradient(rgb(237, 237, 237), rgb(237, 237, 237) 38%, rgb(222, 222, 222));
+  box-shadow: rgba(0, 0, 0, 0.08) 0 1px 0, rgba(255, 255, 255, 0.75) 0 1px 2px inset;
+  text-shadow: rgb(240, 240, 240) 0 1px 0;
+  border: solid 1px var(--search-border);
+}
+
+#rate {
+  white-space: nowrap;
+}
+body:not([data-size="0"]) #rate,
+#rate[data-hide=true] {
+  display: none;
+}

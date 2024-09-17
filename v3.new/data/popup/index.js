@@ -1,18 +1,18 @@
-/* global engine */
+/* global xapian */
 'use strict';
 
 // Tests => PDF, discarded tab, about:blank, chrome://extensions/, google, webstore
 
 const isFirefox = navigator.userAgent.includes('Firefox');
+const states = {
+  ready: false,
+  docs: 0,
+  ignored: 0
+};
 
-const pdfjsLib = window['pdfjs-dist/build/pdf'];
-pdfjsLib.GlobalWorkerOptions.workerSrc = './parser/pdf.worker.js';
 
 const args = new URLSearchParams(location.search);
 document.body.dataset.mode = args.get('mode');
-
-let ready = false;
-let docs = 0;
 
 let aid;
 const arrange = () => {
@@ -30,197 +30,39 @@ arrange.do = () => {
   });
 };
 
-// keep tabs
-const cache = {};
+const closeme = () => document.body.dataset.mode === 'tab' ? chrome.storage.local.get({
+  'close-on-tab-mode': true
+}, prefs => {
+  if (prefs['close-on-tab-mode']) {
+    window.close();
+  }
+}) : window.close();
 
-const index = (tab, scope = 'both', options = {}) => {
-  const od = {
-    body: '',
-    date: new Date(document.lastModified).toISOString().split('T')[0].replace(/-/g, ''),
-    description: '',
-    frameId: 0,
-    keywords: '',
-    lang: 'english',
-    mime: 'text/html',
-    title: tab.title,
-    url: tab.url,
-    top: true
-  };
+document.addEventListener('engine-ready', async e => {
+  Object.assign(states, {
+    ready: true
+  }, e.detail);
 
-  return Promise.race([new Promise(resolve => {
-    chrome.scripting.executeScript({
-      target: {
-        tabId: tab.id,
-        allFrames: true
-      },
-      files: ['/data/collect.js']
-    }).catch(() => []).then(arr => {
-      chrome.runtime.lastError;
-      arr = (arr || []).filter(a => a && a.result).map(a => a.result);
-      arr = (arr && arr.length ? arr : [od]).map(o => {
-        o.title = o.title || tab.title;
-        return o;
-      });
-
-      // support parsing PDF files
-      let parse = false;
-      if (options['parse-pdf'] === true) {
-        if (arr && tab.url && (arr[0].mime === 'application/pdf' || tab.url.includes('.pdf'))) {
-          if (scope === 'both' || scope === 'body') {
-            parse = true;
-          }
-        }
-      }
-      if (parse) {
-        pdfjsLib.getDocument(tab.url).promise.then(pdf => {
-          return Promise.all(Array.from(Array(pdf.numPages)).map(async (a, n) => {
-            const page = await pdf.getPage(n + 1);
-            const content = await page.getTextContent();
-            return content.items.map(s => s.str).join('') + '\n\n' +
-              content.items.map(s => s.str).join('\n');
-          })).then(a => a.join('\n\n')).then(c => {
-            arr[0].body = c;
-            arr[0].pdf = true;
-            resolve(arr);
-          });
-        }).catch(e => {
-          console.warn('Cannot parse PDF document', tab.url, e);
-          resolve(arr);
-        });
-      }
-      else {
-        resolve(arr);
-      }
-    });
-  }), new Promise(resolve => setTimeout(() => {
-    resolve([od]);
-  }, options['fetch-timeout']))]).then(async arr => {
-    try {
-      arr = arr.filter(a => a && (a.title || a.body));
-
-      for (const o of arr) {
-        o.lang = engine.language(o.lang);
-        o.title = o.title || tab.title || cache[tab.id].title;
-        if (o.title) {
-          cache[tab.id].title = o.title;
-        }
-        const favIconUrl = tab.favIconUrl || o.favIconUrl || cache[tab.id].favIconUrl;
-        if (favIconUrl) {
-          cache[tab.id].favIconUrl = favIconUrl;
-        }
-        if (scope === 'body') {
-          o.title = '';
-        }
-        else if (scope === 'title') {
-          o.body = '';
-        }
-        if (options['max-content-length'] > 0) {
-          o.body = o.body.slice(0, options['max-content-length']);
-        }
-
-        await engine.add(o, {
-          tabId: tab.id,
-          windowId: tab.windowId,
-          favIconUrl: favIconUrl || 'web.svg',
-          frameId: o.frameId,
-          top: o.top,
-          lang: o.lang
-        });
-      }
-      return arr.length;
+  // update interface
+  if (states.docs === 0) {
+    root.dataset.empty = 'Nothing to index. You need to have some tabs open.';
+  }
+  else {
+    root.dataset.empty = `Searching among ${states.docs} document${states.docs === 1 ? '' : 's'}`;
+    if (states.ignored) {
+      root.dataset.empty += `. ${states.ignored} tab${states.ignored === 1 ? ' is' : 's are'} ignored.`;
     }
-    catch (e) {
-      console.warn('document skipped', e);
-      if (e.message.includes('memory access out of bounds')) {
-        return -1;
-      }
-      return 0;
-    }
-  });
-};
+  }
 
-document.addEventListener('engine-ready', async () => {
   const prefs = await (new Promise(resolve => chrome.storage.local.get({
-    'scope': 'both',
-    'index': 'browser',
-    'parse-pdf': true,
-    'fetch-timeout': 10000,
-    'max-content-length': 100 * 1024,
-    'duplicates': true,
     'highlight-color': 'orange'
   }, prefs => resolve(prefs))));
-
-  const query = {};
-  if (prefs.index === 'window' || prefs.index === 'tab') {
-    query.currentWindow = true;
-  }
-  if (prefs.index === 'tab') {
-    query.active = true;
-  }
-  let tabs = await chrome.tabs.query(query);
-  tabs.forEach(tab => cache[tab.id] = tab);
 
   // highlight
   document.documentElement.style.setProperty(
     '--highlight-color',
     'var(--highlight-' + prefs['highlight-color'] + ')'
   );
-
-  // index
-  let ignored = 0;
-  if (prefs.duplicates) {
-    const list = new Set();
-    tabs = tabs.filter(t => {
-      if (list.has(t.url)) {
-        ignored += 1;
-        return false;
-      }
-      list.add(t.url);
-      return true;
-    });
-  }
-
-  const length = 5; // number of simultaneous indexers
-  for (let n = 0; n < tabs.length; n += length) {
-    root.dataset.empty = `Indexing ${n + 1} of ${tabs.length} tabs. Please wait...`;
-
-    const pt = Array.from({
-      length
-    }, (_, m) => tabs[n + m]).filter(a => a);
-    const cs = await Promise.all(pt.map(tab => index(tab, prefs.scope, {
-      'parse-pdf': prefs['parse-pdf'],
-      'fetch-timeout': prefs['fetch-timeout'],
-      'max-content-length': prefs['max-content-length']
-    }).then(c => {
-      if (c === -1) {
-        alert(`Your browser's memory limit for indexing content reached.
-
-  Right-click on the toolbar button and reduce the "Maximum Size of Each Content" option and retry.`);
-        window.close();
-      }
-      return c;
-    })));
-
-    for (const c of cs) {
-      if (c === 0 || c === -1) {
-        ignored += 1;
-      }
-      else {
-        docs += c;
-      }
-    }
-  }
-
-  if (docs === 0) {
-    root.dataset.empty = 'Nothing to index. You need to have some tabs open.';
-  }
-  else {
-    root.dataset.empty = `Searching among ${docs} document${docs === 1 ? '' : 's'}`;
-    if (ignored) {
-      root.dataset.empty += `. ${ignored} tab${ignored === 1 ? ' is' : 's are'} ignored.`;
-    }
-  }
-  ready = true;
 
   // do we have anything to search
   const input = document.querySelector('#search input[type=search]');
@@ -309,10 +151,10 @@ const search = query => {
       if (signal.aborted) {
         return;
       }
-      const lang = engine.language(obj && obj.languages.length ? obj.languages[0].language : 'en');
+      const lang = xapian.language(obj && obj.languages.length ? obj.languages[0].language : 'en');
 
       try {
-        const {size, estimated} = await engine.search({
+        const {size, estimated} = await xapian.search({
           query,
           lang,
           length: prefs['search-size']
@@ -324,8 +166,8 @@ const search = query => {
           info.textContent = '';
           return;
         }
-        info.textContent =
-          `About ${estimated} results (${((Date.now() - start) / 1000).toFixed(2)} seconds in ${docs} documents)`;
+        const elapsed = ((Date.now() - start) / 1000).toFixed(2);
+        info.textContent = `About ${estimated} results (${elapsed} seconds in ${states.docs} documents)`;
 
         const t = document.getElementById('result');
         for (let index = 0; index < size; index += 1) {
@@ -333,10 +175,10 @@ const search = query => {
             return;
           }
           try {
-            const guid = await engine.search.guid(index);
-            const obj = await engine.body(guid);
+            const guid = await xapian.search.guid(index);
+            const obj = await xapian.body(guid);
 
-            const percent = await engine.search.percent(index);
+            const percent = await xapian.search.percent(index);
 
             const clone = document.importNode(t.content, true);
             clone.querySelector('a').href = obj.url;
@@ -349,13 +191,13 @@ const search = query => {
               percent
             });
             clone.querySelector('input[name=search]').checked = index == 0;
-            clone.querySelector('cite').textContent = obj.url;
+            clone.querySelector('cite').textContent = decodeURIComponent(obj.url);
             clone.querySelector('h2 span[data-id="number"]').textContent = '#' + (index + 1);
             clone.querySelector('h2').title = clone.querySelector('h2 span[data-id="title"]').textContent = obj.title;
             clone.querySelector('h2 img').onerror = e => {
               e.target.src = 'web.svg';
             };
-            clone.querySelector('h2 img').src = obj.favIconUrl || cache[obj.tabId]?.favIconUrl || (isFirefox ?
+            clone.querySelector('h2 img').src = obj.favIconUrl || (isFirefox ?
               ('chrome://favicon/' + obj.url) :
               `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(obj.url)}&size=32`
             );
@@ -374,7 +216,7 @@ const search = query => {
             else {
               code.style['background-color'] = 'gray';
             }
-            const snippet = await engine.search.snippet({
+            const snippet = await xapian.search.snippet({
               index,
               size: prefs['snippet-size']
             });
@@ -407,12 +249,12 @@ document.getElementById('search').addEventListener('input', e => {
   const query = e.target.value.trim();
   root.textContent = '';
   const info = document.getElementById('info');
-  if (query && ready) {
+  if (query && states.ready) {
     search(query);
   }
   else {
     info.textContent = '';
-    document.body.dataset.size = ready ? 0 : -1;
+    document.body.dataset.size = states.ready ? 0 : -1;
   }
   // save last query
   chrome.storage.local.set({query});
@@ -420,9 +262,9 @@ document.getElementById('search').addEventListener('input', e => {
 
 const deep = async a => {
   const guid = a.dataset.guid;
-  const data = await engine.body(guid);
+  const data = await xapian.body(guid);
 
-  await engine.new(1, 'deep-search');
+  await xapian.new(1, 'deep-search');
 
   const prefs = await new Promise(resolve => chrome.storage.local.get({
     'snippet-size': 300,
@@ -446,13 +288,12 @@ const deep = async a => {
 
   const lang = data.lang;
   try {
-    for (const body of bodies) {
-      await engine.add({
-        body,
-        lang
-      }, undefined, undefined, 1);
-    }
-    const {size} = await engine.search({
+    await xapian.add(bodies.map(body => [{
+      body,
+      lang
+    }]), 1);
+
+    const {size} = await xapian.search({
       query: document.querySelector('#search input[type=search]').value,
       lang,
       length: prefs['search-size']
@@ -463,7 +304,7 @@ const deep = async a => {
       for (let index = size - 1; index >= 0; index -= 1) {
         const n = o.cloneNode(true);
 
-        const snippet = await engine.search.snippet({
+        const snippet = await xapian.search.snippet({
           index,
           size: prefs['snippet-size']
         });
@@ -474,7 +315,7 @@ const deep = async a => {
         n.querySelector('p').content = n.querySelector('p').innerHTML = snippet;
 
         const code = n.querySelector('h2 code');
-        const percent = await engine.search.percent(index);
+        const percent = await xapian.search.percent(index);
         code.textContent = percent + '%';
 
         // intersection observer
@@ -489,7 +330,7 @@ const deep = async a => {
   catch (e) {
     console.warn(e);
   }
-  engine.release(1);
+  xapian.release(1);
 };
 
 document.addEventListener('click', e => {
@@ -526,9 +367,9 @@ document.addEventListener('click', e => {
         method: 'find',
         tabId: Number(tabId),
         windowId: Number(windowId),
-        frameId,
+        frameId: Number(frameId),
         snippet
-      }, () => window.close());
+      }, closeme);
       e.preventDefault();
     }
     else if (cmd === 'faqs') {
@@ -558,7 +399,7 @@ document.addEventListener('click', e => {
       chrome.runtime.sendMessage({
         method: cmd,
         ids
-      }, () => window.close());
+      }, closeme);
     }
   }
 });
@@ -632,7 +473,7 @@ window.addEventListener('keydown', e => {
     input.select();
   }
   else if (e.code === 'Escape' && e.target.value === '') {
-    window.close();
+    closeme();
   }
   else if (e.code === 'Space' && e.shiftKey) {
     e.preventDefault();
@@ -656,7 +497,7 @@ window.addEventListener('keydown', e => {
       chrome.runtime.sendMessage({
         method: 'group',
         ids
-      }, () => window.close());
+      }, closeme);
     }
   }
   else if ((e.code === 'Enter' || e.code === 'NumpadEnter')) {
@@ -678,12 +519,12 @@ window.addEventListener('keydown', e => {
         parent.getBoundingClientRect().bottom > document.documentElement.clientHeight ||
         parent.getBoundingClientRect().top < root.getBoundingClientRect().top
       ) {
-        parent.scrollIntoView({block: 'center', behavior: 'smooth'});
+        parent.scrollIntoView({block: 'center'});
       }
     }
     else if (n === es.length - 1) {
       es[0].checked = true;
-      root.scrollTo({top: 0, behavior: 'smooth'});
+      root.scrollTo({top: 0});
     }
   }
   else if (e.code === 'ArrowUp') {
@@ -693,19 +534,19 @@ window.addEventListener('keydown', e => {
     const n = es.findIndex(e => e.checked);
     if (n === 1) {
       es[0].checked = true;
-      root.scrollTo({top: 0, behavior: 'smooth'});
+      root.scrollTo({top: 0});
     }
     else if (n !== 0) {
       es[n - 1].checked = true;
       const parent = es[n - 1].parentElement;
       if (parent.getBoundingClientRect().top < root.getBoundingClientRect().top) {
-        parent.scrollIntoView({block: 'center', behavior: 'smooth'});
+        parent.scrollIntoView({block: 'center'});
       }
     }
     else if (n === 0) {
       es[es.length - 1].checked = true;
       const parent = es[es.length - 1].parentElement;
-      parent.scrollIntoView({block: 'center', behavior: 'smooth'});
+      parent.scrollIntoView({block: 'center'});
     }
   }
   else if (e.code === 'PageUp') {
@@ -714,7 +555,7 @@ window.addEventListener('keydown', e => {
     const es = [...document.querySelectorAll('.result input[type=radio]')];
     if (es) {
       es[0].checked = true;
-      root.scrollTo({top: 0, behavior: 'smooth'});
+      root.scrollTo({top: 0});
     }
   }
   else if (e.code === 'PageDown') {
@@ -724,7 +565,7 @@ window.addEventListener('keydown', e => {
     if (es.length) {
       es[es.length - 1].checked = true;
       const parent = es[es.length - 1].parentElement;
-      parent.scrollIntoView({block: 'center', behavior: 'smooth'});
+      parent.scrollIntoView({block: 'center'});
     }
   }
 });
@@ -775,26 +616,24 @@ document.getElementById('internal').addEventListener('submit', e => {
   });
 });
 
-// select engine
-chrome.storage.local.get({
-  engine: 'xapian'
-}, prefs => {
-  const s = document.createElement('script');
-  s.onload = () => { // delete database on close
-    if (prefs.engine === 'xapian') {
-      chrome.runtime.connect({
-        name: engine.name
-      });
-    }
-  };
-  s.src = '../' + prefs.engine + '/connect.js';
-  console.info('I am using', prefs.engine, 'engine');
-  document.body.dataset.engine = prefs.engine;
-  document.body.appendChild(s);
-});
-
 // select results
 document.addEventListener('change', () => {
   document.body.dataset.menu = Boolean(document.querySelector('#results [data-id="select"]:checked'));
 });
 
+chrome.runtime.onMessage.addListener((request, sender, response) => {
+  if (request.method === 'search-interface') {
+    response(true);
+    chrome.runtime.sendMessage({
+      method: 'focus'
+    });
+  }
+  else if (request.method === 'close') {
+    window.close();
+  }
+});
+
+// focus
+if (isFirefox) {
+  setTimeout(() => document.querySelector('input[name="search"]').focus(), 300);
+}

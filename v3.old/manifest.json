@@ -38,9 +38,6 @@
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   },
   "commands": {
-    "_execute_action": {},
-    "_execute_sidebar_action": {
-      "description": "Open the sidebar view with a shortcut"
-    }
+    "_execute_action": {}
   }
 }

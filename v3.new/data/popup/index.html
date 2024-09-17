@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" type="text/css" href="index.css">
+  <title>Search all Tabs</title>
+  <link rel="icon" type="image/png" href="/data/icons/32.png">
+</head>
+<body data-size="-1" data-menu=false>
+  <header>
+    <form id="search" role="search" aria-label="search all tabs">
+      <input name="search" id="search" type="search" dir="auto" autofocus title="available keywords (hostname:, title:, mime:, url:, date:, filename:, language:, keyword:, description:)" placeholder="type your query" tabindex="0">
+      <button type=submit>
+        <svg focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg>
+      </button>
+    </form>
+  </header>
+  <template id="result">
+    <div class="result">
+      <input type="radio" name="search">
+      <a href="" data-cmd="open">
+        <h2 dir="auto">
+          <img>
+          <span data-id="title"></span>
+          <span data-id="deep-search" title="Deep search: try to find more results in this document"></span>
+          <input type="checkbox" data-id="select">
+          <span data-id="type" title="belongs to an iframe element"></span>
+          <span data-id="number" title="Press Ctrl + #n or Command + #n to open"></span>
+          <code></code>
+        </h2>
+        <cite></cite>
+      </a>
+      <p></p>
+    </div>
+  </template>
+  <form id="internal" class="hidden">
+    <span id="internal-close">×</span>
+    Index title and URL of internal tabs? <input type="submit" value="Permit">
+  </form>
+  <div id="guide" class="hidden">
+    <span id="guide-close">×</span>
+    <ul>
+      <li>Available keywords: <code>hostname</code>, <code>title</code>, <code>mime</code>, <code>url</code>, <code>date</code>, <code>filename</code>, <code>language</code>, <code>keyword</code>, <code>description</code></li>
+      <li>Press ENTER key on the search box to switch to the first matched tab and close this window</li>
+      <li>Press SHIFT + ENTER on the search box detach all the matching tabs and group them as a new window</li>
+    </ul>
+  </div>
+  <div id="info-bar">
+    <a href="#" data-cmd="faqs" title="Ctrl + Shift + F or Command + Shift + F"><u>F</u>AQs</a>
+    <a href="#" data-cmd="shortcuts" title="Ctrl + Shift + S or Command + Shift + S"><u>S</u>hortcuts</a>
+    <a href="#" data-cmd="rate" data-hide=true id="rate">Rate Me</a>
+    <div class="select">
+      <a href="#" data-cmd="select-all" title="Ctrl + Shift + A or Command + Shift + A">Select <u>A</u>ll</a> / <a href="#" data-cmd="select-none" title="Ctrl + Shift + N or Command + Shift + N"><u>N</u>one</a>
+    </div>
+    <span id="info"></span>
+    <div id="tools">
+      <button class="button" data-cmd="group" title="Ctrl + Shift + G or Command + Shift + G"><u>G</u>roup Tabs</button>
+      <button class="button" data-cmd="delete" title="Ctrl + Shift + C or Command + Shift + C"><u>C</u>lose Tabs</button>
+    </div>
+  </div>
+  <div id="results" data-empty="Your search query is performed when indexing is over..."></div>
+
+  <script type="text/javascript" src="/data/xapian/connect.js"></script>
+  <script type="text/javascript" src="/data/xapian/xapian_noexception_wasm_db.js"></script>
+  <script type="text/javascript" src="parser/pdf.js"></script>
+  <script src="index.js"></script>
+  <script src="indexer.js"></script>
+  <script src="rate.js"></script>
+</body>
+</html>
