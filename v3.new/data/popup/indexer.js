@@ -176,7 +176,7 @@ class Indexer {
       };
       if (this.#prefs['max-content-length'] > 0) {
         if (vo.body && vo.body.length > this.#prefs['max-content-length']) {
-          console.log('trimming', tab.url, vo.body.length);
+          // console.log('trimming', tab.url, vo.body.length);
           vo.body = vo.body.slice(0, this.#prefs['max-content-length']);
         }
       }
@@ -226,12 +226,12 @@ xapian.ready().then(async () => {
       if (id in ps.hashes) {
         if (tab.url === ps.hashes[id].url) {
           if (ps['clean-up'].includes(id)) {
-            console.log('cleaning old entry for re-indexing', id, ps.hashes[id].guids);
+            // console.log('cleaning old entry for re-indexing', id, ps.hashes[id].guids);
             await xapian.remove(ps.hashes[id].guids, 0, false);
             delete ps.hashes[id];
           }
           else {
-            console.log('tab is already in database', tab.url);
+            // console.log('tab is already in database', tab.url);
             hashes[id] = ps.hashes[id];
             docs += hashes[id].guids.length;
             delete ps.hashes[id];
@@ -248,7 +248,7 @@ xapian.ready().then(async () => {
       });
       if (frames.length) {
         const guids = await indexer.add(tab, frames);
-        console.log('added tab to database', tab.url, guids);
+        // console.log('added tab to database', tab.url, guids);
         docs += guids.length;
         hashes[tab.id] = {
           url: tab.url,
@@ -259,7 +259,7 @@ xapian.ready().then(async () => {
   }
   // clean unused entries
   for (const [id, {guids}] of Object.entries(ps.hashes)) {
-    console.log('cleaning old entry', id, guids);
+    // console.log('cleaning old entry', id, guids);
     await xapian.remove(guids, 0, false);
     delete ps.hashes[id];
   }

@@ -526,8 +526,15 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       chrome.runtime.lastError;
 
       chrome.storage.local.remove(['hashes', 'clean-up']);
-      indexedDB.deleteDatabase('/database');
-      indexedDB.deleteDatabase('object-storage-xapian');
+      if (typeof indexedDB.databases === 'function') { // chrome
+        indexedDB.databases().then(databases => databases.forEach(db => {
+          indexedDB.deleteDatabase(db.name);
+        }));
+      }
+      else { // Firefox
+        indexedDB.deleteDatabase('/database');
+        indexedDB.deleteDatabase('object-storage-xapian');
+      }
     });
   }
   else {
