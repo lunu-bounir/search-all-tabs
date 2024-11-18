@@ -212,6 +212,13 @@ xapian.ready().then(async () => {
 
   // run indexer on multiple tabs at once
   for (let n = 0; n < entries.length; n += 5) {
+    document.dispatchEvent(new CustomEvent('indexing-stat', {
+      detail: {
+        current: n,
+        total: entries.length
+      }
+    }));
+
     await Promise.all([0, 1, 2, 3, 4].map(async m => {
       if (!entries[n + m]) {
         return;
@@ -239,6 +246,7 @@ xapian.ready().then(async () => {
           }
         }
       }
+
       const frames = (await indexer.inspect(tab)).filter(o => {
         if (o.url || o.title || o.body) {
           return true;
@@ -257,6 +265,7 @@ xapian.ready().then(async () => {
       }
     }));
   }
+
   // clean unused entries
   for (const [id, {guids}] of Object.entries(ps.hashes)) {
     // console.log('cleaning old entry', id, guids);

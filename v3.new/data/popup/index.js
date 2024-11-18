@@ -637,3 +637,9 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
 if (isFirefox) {
   setTimeout(() => document.querySelector('input[name="search"]').focus(), 300);
 }
+
+// Indexing stats
+document.addEventListener('indexing-stat', e => {
+  const {current, total} = e.detail;
+  root.dataset.empty = 'Indexing new documents (' + (current / total * 100).toFixed(0) + '%). Please wait...';
+});

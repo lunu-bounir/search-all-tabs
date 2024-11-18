@@ -15,6 +15,7 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
     chrome.windows.update(request.windowId, {
       focused: true
     });
+
     chrome.storage.local.get({
       strict: false
     }, prefs => {
