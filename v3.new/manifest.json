@@ -44,6 +44,10 @@
   "commands": {
     "_execute_action": {}
   },
+  "options_ui": {
+    "page": "/data/options/index.html",
+    "open_in_tab": true
+  },
   "browser_specific_settings": {
     "gecko": {
       "id": "{76b6ec7e-5411-4d36-9aa5-2bb08e31c27e}",

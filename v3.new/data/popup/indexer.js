@@ -5,13 +5,13 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = './parser/pdf.worker.js';
 
 class Preferences {
   get(prefs) {
-    return new Promise(resolve => chrome.storage.local.get(prefs, resolve));
+    return chrome.storage.local.get(prefs);
   }
   set(prefs) {
-    return new Promise(resolve => chrome.storage.local.set(prefs, resolve));
+    return chrome.storage.local.set(prefs);
   }
   remove(key) {
-    return new Promise(resolve => chrome.storage.local.remove(key, resolve));
+    return chrome.storage.local.remove(key);
   }
 }
 class Indexer {
@@ -45,7 +45,7 @@ class Indexer {
     });
     this.#prefs.root = prefs;
   }
-  async query() {
+  async query(ignored = []) {
     const query = {};
     if (this.#prefs.index === 'window' || this.#prefs.index === 'tab') {
       query.currentWindow = true;
@@ -65,6 +65,10 @@ class Indexer {
         if (list.has(tab.url)) {
           o.skip = true;
           o.reasons.push('DUPLICATED');
+        }
+        else if (tab.url && ignored.some(s => tab.url.includes(s))) {
+          o.skip = true;
+          o.reasons.push('USER_REQUEST');
         }
         else {
           list.add(tab.url);
@@ -195,14 +199,15 @@ xapian.ready().then(async () => {
   const prefs = new Preferences();
   const ps = await prefs.get({
     'hashes': {},
-    'clean-up': [] // tab ids to get re-indexed
+    'clean-up': [], // tab ids to get re-indexed
+    'user-exception-list': [] // patterns to get ignored by user
   });
   const hashes = {};
   let docs = 0;
   let ignored = 0;
 
   await indexer.prepare();
-  const entries = Object.entries(await indexer.query());
+  const entries = Object.entries(await indexer.query(ps['user-exception-list']));
 
   if (ps['clean-up'].includes(-1)) {
     await xapian.reset();

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="index.css">
+  <title>Options Page :: Search all Tabs</title>
+</head>
+<body>
+  <p>Comma-separated list of keywords to exclude from tab indexing. If a tab's URL contains any of these keywords, it will be ignored by the indexer. This feature is useful for permanently excluding specific webpages from being indexed by the extension.</p>
+  <textarea rows="10" id="user-exception-list" placeholder="e.g.: www.google.com, example.com"></textarea>
+  <p>
+    <input type="button" value="Support Development" id="support">
+    <input type="button" value="Save Options" id="save">
+    <span id="toast"></span>
+  </p>
+  <script src="index.js"></script>
+</body>
+</html>
