@@ -39,7 +39,9 @@ const closeme = () => document.body.dataset.mode === 'tab' ? chrome.storage.loca
 }) : window.close();
 
 document.addEventListener('engine-ready', async e => {
-  console.debug('🚀 Extension popup opened - engine ready event received', e.detail);
+  if (window.logger) {
+    window.logger.debug('Extension popup opened - engine ready event received', e.detail);
+  }
   Object.assign(states, {
     ready: true
   }, e.detail);
@@ -167,13 +169,17 @@ const search = query => {
       const lang = xapian.language(obj && obj.languages.length ? obj.languages[0].language : 'en');
 
       try {
-        console.debug('🎯 Search started:', query, 'in', lang, 'language');
+        if (window.logger) {
+          window.logger.debug('Search started:', query, 'in', lang, 'language');
+        }
         const {size, estimated} = await xapian.search({
           query,
           lang,
           length: prefs['search-size']
         });
-        console.debug('📊 Search results:', size, 'found,', estimated, 'estimated');
+        if (window.logger) {
+          window.logger.debug('Search results:', size, 'found,', estimated, 'estimated');
+        }
 
         document.body.dataset.size = size;
 
@@ -196,7 +202,9 @@ const search = query => {
             const percent = await xapian.search.percent(index);
 
             const isHistory = obj.isHistory || false;
-            console.debug('🏷️ Result', index + 1, ':', obj.title, '(' + percent + '% match)', '[' + (isHistory ? 'history' : 'tab') + ']');
+            if (window.logger) {
+              window.logger.debug('Result', index + 1, ':', obj.title, '(' + percent + '% match)', '[' + (isHistory ? 'history' : 'tab') + ']', 'tabId:', obj.tabId);
+            }
             
             const clone = document.importNode(t.content, true);
             clone.querySelector('a').href = obj.url;
@@ -254,12 +262,16 @@ const search = query => {
             root.appendChild(clone);
           }
           catch (e) {
-            console.warn('Cannot add a result', e);
+            if (window.logger) {
+              window.logger.warn('Cannot add a result', e);
+            }
           }
         }
       }
       catch (e) {
-        console.warn(e);
+        if (window.logger) {
+          window.logger.warn('Search error:', e);
+        }
         info.textContent = e.message || 'Unknown error occurred';
       }
     });
@@ -269,7 +281,9 @@ search.controllers = [];
 
 document.getElementById('search').addEventListener('input', e => {
   const query = e.target.value.trim();
-  console.debug('🔍 Search query entered:', query);
+  if (window.logger) {
+    window.logger.debug('Search query entered:', query);
+  }
   root.textContent = '';
   const info = document.getElementById('info');
   if (query && states.ready) {
@@ -351,7 +365,9 @@ const deep = async a => {
     }
   }
   catch (e) {
-    console.warn(e);
+    if (window.logger) {
+      window.logger.warn('Deep search error:', e);
+    }
   }
   xapian.release(1);
 };
@@ -389,14 +405,18 @@ document.addEventListener('click', e => {
       // Check if this is a history item (negative tabId indicates history)
       if (Number(tabId) === -1) {
         // This is a history item - open in new tab
-        console.debug('👆 Opening history item in new tab:', a.href);
+        if (window.logger) {
+          window.logger.debug('Opening history item in new tab:', a.href);
+        }
         chrome.tabs.create({
           url: a.href,
           active: true
         }, closeme);
       } else {
         // This is an active tab - focus it
-        console.debug('👆 Focusing active tab:', Number(tabId), a.href);
+        if (window.logger) {
+          window.logger.debug('Focusing active tab:', Number(tabId), a.href);
+        }
         const snippet = e.target.closest('.result').querySelector('p').content;
         chrome.runtime.sendMessage({
           method: 'find',
@@ -439,7 +459,9 @@ document.addEventListener('click', e => {
           ids
         }, closeme);
       } else {
-        console.warn('No active tabs selected for', cmd, 'operation');
+        if (window.logger) {
+          window.logger.warn('No active tabs selected for', cmd, 'operation');
+        }
       }
     }
   }
@@ -500,7 +522,9 @@ window.addEventListener('keydown', e => {
 
     if (links.length) {
       navigator.clipboard.writeText(links.join('\n')).catch(e => {
-        console.warn(e);
+        if (window.logger) {
+          window.logger.warn('Clipboard operation failed:', e);
+        }
         if (e) {
           alert(links.join('\n'));
         }
@@ -673,6 +697,25 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
   else if (request.method === 'close') {
     window.close();
   }
+  else if (request.method === 'unified-log') {
+    // Unified logging messages - just acknowledge receipt
+    // The actual logging is handled by the UnifiedLogger's chrome.storage persistence
+    if (window.logger) {
+      // Optional: Log that we received a unified log message for debugging
+      // window.logger.debug('Received unified log from', request.context);
+    }
+  }
+  else if (request.method === 'log' && window.logger) {
+    // Legacy support for old log messages
+    const { level, message, args, context } = request;
+    const logMessage = `[${context}] ${message}`;
+    
+    if (window.logger[level]) {
+      window.logger[level](logMessage, ...(args || []));
+    } else {
+      window.logger.debug(logMessage, ...(args || []));
+    }
+  }
 });
 
 // focus
@@ -703,7 +746,9 @@ const updateResultCounts = () => {
     if (countTabs) countTabs.textContent = tabResults.length;
     if (countHistory) countHistory.textContent = historyResults.length;
   } catch (e) {
-    console.warn('Error updating result counts:', e);
+    if (window.logger) {
+      window.logger.warn('Error updating result counts:', e);
+    }
   }
 };
 
@@ -762,7 +807,9 @@ const applyFilter = (filter) => {
     
     currentFilter = filter;
   } catch (e) {
-    console.warn('Error applying filter:', e);
+    if (window.logger) {
+      window.logger.warn('Error applying filter:', e);
+    }
   }
 };
 
@@ -811,7 +858,9 @@ const initializeFilterOptions = () => {
         if (menu) menu.classList.add('hidden');
         if (toggle) toggle.classList.remove('active');
       } catch (e) {
-        console.warn('Error in filter option click:', e);
+        if (window.logger) {
+          window.logger.warn('Error in filter option click:', e);
+        }
       }
     });
   });
@@ -847,7 +896,9 @@ const initializeFilterObserver = () => {
           updateResultCounts();
           applyFilter(currentFilter);
         } catch (e) {
-          console.warn('Filter update error:', e);
+          if (window.logger) {
+            window.logger.warn('Filter update error:', e);
+          }
         }
       }, 100);
     });

@@ -13,7 +13,9 @@ document.getElementById('save').onclick = async () => {
     'history-max-results': parseInt(document.getElementById('history-max-results').value) || 1000
   };
   
-  console.debug('⚙️ Saving extension settings:', newSettings);
+  if (window.logger) {
+    window.logger.debug('Saving extension settings:', newSettings);
+  }
   await chrome.storage.local.set(newSettings);
   
   clearTimeout(id);
@@ -39,7 +41,9 @@ chrome.storage.local.get({
   'history-days': 7,
   'history-max-results': 1000
 }).then(prefs => {
-  console.debug('⚙️ Options page loaded with settings:', prefs);
+  if (window.logger) {
+    window.logger.debug('Options page loaded with settings:', prefs);
+  }
   document.getElementById('user-exception-list').value = prefs['user-exception-list'].join(', ');
   document.getElementById('history-enabled').checked = prefs['history-enabled'];
   document.getElementById('history-days').value = prefs['history-days'];
