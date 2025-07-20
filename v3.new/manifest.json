@@ -20,7 +20,8 @@
     "contextMenus",
     "scripting",
     "favicon",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "history"
   ],
   "host_permissions": [
     "<all_urls>"

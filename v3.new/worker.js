@@ -8,6 +8,7 @@ const cache = {};
 chrome.tabs.onRemoved.addListener(tabId => delete cache[tabId]);
 
 chrome.runtime.onMessage.addListener((request, sender, response) => {
+  console.debug('🔧 Background worker received message:', request.method, request);
   if (request.method === 'find') {
     chrome.tabs.update(request.tabId, {
       active: true

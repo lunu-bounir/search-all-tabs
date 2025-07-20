@@ -39,19 +39,32 @@ const closeme = () => document.body.dataset.mode === 'tab' ? chrome.storage.loca
 }) : window.close();
 
 document.addEventListener('engine-ready', async e => {
+  console.debug('🚀 Extension popup opened - engine ready event received', e.detail);
   Object.assign(states, {
     ready: true
   }, e.detail);
 
   // update interface
   if (states.docs === 0) {
-    root.dataset.empty = 'Nothing to index. You need to have some tabs open.';
+    chrome.storage.local.get({'history-enabled': false}, prefs => {
+      if (prefs['history-enabled']) {
+        root.dataset.empty = 'Nothing to index. You need to have some tabs open or enable history search in options.';
+      } else {
+        root.dataset.empty = 'Nothing to index. You need to have some tabs open.';
+      }
+    });
   }
   else {
-    root.dataset.empty = `Searching among ${states.docs} document${states.docs === 1 ? '' : 's'}`;
-    if (states.ignored) {
-      root.dataset.empty += `. ${states.ignored} tab${states.ignored === 1 ? ' is' : 's are'} ignored.`;
-    }
+    chrome.storage.local.get({'history-enabled': false}, prefs => {
+      let sources = 'tabs';
+      if (prefs['history-enabled']) {
+        sources = 'tabs and browser history';
+      }
+      root.dataset.empty = `Searching among ${states.docs} document${states.docs === 1 ? '' : 's'} from ${sources}`;
+      if (states.ignored) {
+        root.dataset.empty += `. ${states.ignored} item${states.ignored === 1 ? ' is' : 's are'} ignored.`;
+      }
+    });
   }
 
   const prefs = await (new Promise(resolve => chrome.storage.local.get({
@@ -154,11 +167,13 @@ const search = query => {
       const lang = xapian.language(obj && obj.languages.length ? obj.languages[0].language : 'en');
 
       try {
+        console.debug('🎯 Search started:', query, 'in', lang, 'language');
         const {size, estimated} = await xapian.search({
           query,
           lang,
           length: prefs['search-size']
         });
+        console.debug('📊 Search results:', size, 'found,', estimated, 'estimated');
 
         document.body.dataset.size = size;
 
@@ -180,6 +195,9 @@ const search = query => {
 
             const percent = await xapian.search.percent(index);
 
+            const isHistory = obj.isHistory || false;
+            console.debug('🏷️ Result', index + 1, ':', obj.title, '(' + percent + '% match)', '[' + (isHistory ? 'history' : 'tab') + ']');
+            
             const clone = document.importNode(t.content, true);
             clone.querySelector('a').href = obj.url;
             Object.assign(clone.querySelector('a').dataset, {
@@ -203,6 +221,10 @@ const search = query => {
             );
             if (!obj.top) {
               clone.querySelector('h2 span[data-id="type"]').textContent = 'iframe';
+            } else if (obj.isHistory) {
+              clone.querySelector('h2 span[data-id="type"]').textContent = 'history';
+              clone.querySelector('h2 span[data-id="type"]').style.color = '#0066cc';
+              clone.querySelector('h2 span[data-id="type"]').title = 'From browser history';
             }
             const code = clone.querySelector('h2 code');
 
@@ -247,6 +269,7 @@ search.controllers = [];
 
 document.getElementById('search').addEventListener('input', e => {
   const query = e.target.value.trim();
+  console.debug('🔍 Search query entered:', query);
   root.textContent = '';
   const info = document.getElementById('info');
   if (query && states.ready) {
@@ -362,14 +385,27 @@ document.addEventListener('click', e => {
 
     if (cmd === 'open') {
       const {tabId, windowId, frameId} = a.dataset;
-      const snippet = e.target.closest('.result').querySelector('p').content;
-      chrome.runtime.sendMessage({
-        method: 'find',
-        tabId: Number(tabId),
-        windowId: Number(windowId),
-        frameId: Number(frameId),
-        snippet
-      }, closeme);
+      
+      // Check if this is a history item (negative tabId indicates history)
+      if (Number(tabId) === -1) {
+        // This is a history item - open in new tab
+        console.debug('👆 Opening history item in new tab:', a.href);
+        chrome.tabs.create({
+          url: a.href,
+          active: true
+        }, closeme);
+      } else {
+        // This is an active tab - focus it
+        console.debug('👆 Focusing active tab:', Number(tabId), a.href);
+        const snippet = e.target.closest('.result').querySelector('p').content;
+        chrome.runtime.sendMessage({
+          method: 'find',
+          tabId: Number(tabId),
+          windowId: Number(windowId),
+          frameId: Number(frameId),
+          snippet
+        }, closeme);
+      }
       e.preventDefault();
     }
     else if (cmd === 'faqs') {
@@ -393,13 +429,18 @@ document.addEventListener('click', e => {
     else if (cmd === 'group' || cmd === 'delete') {
       const ids = [...document.querySelectorAll('#results [data-id=select]:checked')]
         .map(e => e.closest('a').dataset.tabId)
+        .filter(id => Number(id) !== -1) // Exclude history items
         .filter((s, i, l) => l.indexOf(s) === i)
         .map(Number);
 
-      chrome.runtime.sendMessage({
-        method: cmd,
-        ids
-      }, closeme);
+      if (ids.length > 0) {
+        chrome.runtime.sendMessage({
+          method: cmd,
+          ids
+        }, closeme);
+      } else {
+        console.warn('No active tabs selected for', cmd, 'operation');
+      }
     }
   }
 });
@@ -490,6 +531,7 @@ window.addEventListener('keydown', e => {
     const ids = [...document.querySelectorAll('[data-tab-id]')]
       .filter(a => meta ? Number(a.dataset.percent) >= 80 : true)
       .map(a => a.dataset.tabId)
+      .filter(id => Number(id) !== -1) // Exclude history items
       .filter((s, i, l) => l.indexOf(s) === i)
       .map(Number);
 

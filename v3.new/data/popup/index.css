@@ -385,3 +385,29 @@ body:not([data-size="0"]) #rate,
 #rate[data-hide=true] {
   display: none;
 }
+
+/* History item styling */
+.result a[data-tab-id="-1"] {
+  border-left: 3px solid #0066cc;
+  padding-left: 5px;
+}
+
+.result a[data-tab-id="-1"] h2 {
+  position: relative;
+}
+
+.result a[data-tab-id="-1"] h2::before {
+  content: "🕒";
+  position: absolute;
+  left: -25px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* History type indicator styling */
+h2 span[data-id="type"]:not(:empty) {
+  color: #0066cc !important;
+  font-weight: 500;
+}

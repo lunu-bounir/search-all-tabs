@@ -34,6 +34,7 @@ class Indexer {
     };
   }
   async prepare() {
+    console.debug('🔧 Indexer.prepare() - Loading preferences');
     const prefs = new Preferences();
     this.#prefs = await prefs.get({
       'fetch-timeout': 10000,
@@ -41,9 +42,17 @@ class Indexer {
       'scope': 'both',
       'parse-pdf': true,
       'index': 'browser',
-      'duplicates': true
+      'duplicates': true,
+      'history-enabled': false,
+      'history-days': 7,
+      'history-max-results': 1000
     });
     this.#prefs.root = prefs;
+    console.debug('⚙️ Indexer preferences loaded:', {
+      historyEnabled: this.#prefs['history-enabled'],
+      historyDays: this.#prefs['history-days'],
+      maxResults: this.#prefs['history-max-results']
+    });
   }
   async query(ignored = []) {
     const query = {};
@@ -78,6 +87,50 @@ class Indexer {
     }
 
     return tabs;
+  }
+  async queryHistory(ignored = []) {
+    if (!this.#prefs['history-enabled']) {
+      console.debug('🕒 History search disabled');
+      return {};
+    }
+
+    const startTime = Date.now() - (this.#prefs['history-days'] * 24 * 60 * 60 * 1000);
+    console.debug('🕒 Querying browser history:', this.#prefs['history-days'], 'days back, max', this.#prefs['history-max-results'], 'results');
+    
+    const historyItems = await chrome.history.search({
+      text: '',
+      startTime: startTime,
+      maxResults: this.#prefs['history-max-results']
+    });
+    
+    console.debug('📖 Found', historyItems.length, 'history items');
+
+    const items = {};
+    const list = new Set();
+    
+    for (const item of historyItems) {
+      const o = {
+        historyItem: item,
+        skip: false,
+        reasons: []
+      };
+      
+      if (this.#prefs.duplicates) {
+        if (list.has(item.url)) {
+          o.skip = true;
+          o.reasons.push('DUPLICATED');
+        } else if (item.url && ignored.some(s => item.url.includes(s))) {
+          o.skip = true;
+          o.reasons.push('USER_REQUEST');
+        } else {
+          list.add(item.url);
+        }
+      }
+      
+      items[`history_${item.id}`] = o;
+    }
+
+    return items;
   }
   async inspect(tab) {
     const od = {
@@ -156,6 +209,67 @@ class Indexer {
 
     return os;
   }
+  async inspectHistory(historyItem) {
+    console.debug('📡 Fetching content for history item:', historyItem.url);
+    const lastVisitTime = new Date(historyItem.lastVisitTime);
+    const od = {
+      body: '',
+      date: lastVisitTime.toISOString().split('T')[0].replace(/-/g, ''),
+      description: '',
+      keywords: '',
+      lang: 'english',
+      mime: 'text/html',
+      title: historyItem.title || '',
+      url: historyItem.url,
+      top: true,
+      favIconUrl: '',
+      frameId: 0,
+      visitCount: historyItem.visitCount,
+      lastVisitTime: historyItem.lastVisitTime,
+      typedCount: historyItem.typedCount
+    };
+
+    try {
+      const response = await fetch(historyItem.url, {
+        method: 'GET',
+        mode: 'cors',
+        cache: 'no-cache',
+        signal: AbortSignal.timeout(this.#prefs['fetch-timeout'])
+      });
+
+      if (response.ok) {
+        const contentType = response.headers.get('content-type');
+        od.mime = contentType || 'text/html';
+        
+        if (contentType && contentType.includes('text/html')) {
+          const html = await response.text();
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          
+          od.body = doc.body ? doc.body.innerText.trim() : '';
+          od.title = doc.title || historyItem.title || '';
+          
+          const metaKeywords = doc.querySelector('meta[name="keywords" i]');
+          if (metaKeywords) od.keywords = metaKeywords.content || '';
+          
+          const metaDescription = doc.querySelector('meta[name="description" i]');
+          if (metaDescription) od.description = metaDescription.content || '';
+          
+          const htmlLang = doc.documentElement.lang;
+          if (htmlLang) od.lang = xapian.language(htmlLang);
+          
+          const favicon = doc.querySelector('link[rel*="icon"]');
+          if (favicon) od.favIconUrl = favicon.href || '';
+          
+          console.debug('✅ History content parsed:', od.title, '(' + od.body.length + ' chars)');
+        }
+      }
+    } catch (e) {
+      console.warn('❌ Cannot fetch content for history item:', historyItem.url, e);
+    }
+
+    return [od];
+  }
   async add(tab, os) {
     const tasks = [];
     for (const o of os) {
@@ -171,12 +285,16 @@ class Indexer {
         timestamp: ''
       };
       const ho = {
-        tabId: tab.id,
-        windowId: tab.windowId,
+        tabId: tab.id || -1,
+        windowId: tab.windowId || -1,
         favIconUrl: o.favIconUrl,
         frameId: o.frameId,
         top: o.top,
-        lang: o.lang
+        lang: o.lang,
+        visitCount: o.visitCount || 0,
+        lastVisitTime: o.lastVisitTime || Date.now(),
+        typedCount: o.typedCount || 0,
+        isHistory: !!tab.isHistory
       };
       if (this.#prefs['max-content-length'] > 0) {
         if (vo.body && vo.body.length > this.#prefs['max-content-length']) {
@@ -207,7 +325,11 @@ xapian.ready().then(async () => {
   let ignored = 0;
 
   await indexer.prepare();
-  const entries = Object.entries(await indexer.query(ps['user-exception-list']));
+  const tabEntries = Object.entries(await indexer.query(ps['user-exception-list']));
+  const historyEntries = Object.entries(await indexer.queryHistory(ps['user-exception-list']));
+  const entries = [...tabEntries, ...historyEntries];
+  
+  console.debug('📋 Found', tabEntries.length, 'active tabs,', historyEntries.length, 'history items to process');
 
   if (ps['clean-up'].includes(-1)) {
     await xapian.reset();
@@ -217,6 +339,10 @@ xapian.ready().then(async () => {
 
   // run indexer on multiple tabs at once
   for (let n = 0; n < entries.length; n += 5) {
+    const batchNum = Math.floor(n / 5) + 1;
+    const totalBatches = Math.ceil(entries.length / 5);
+    console.debug('🔄 Processing batch', batchNum + '/' + totalBatches, '(items', n + 1, '-', Math.min(n + 5, entries.length), ')');
+    
     document.dispatchEvent(new CustomEvent('indexing-stat', {
       detail: {
         current: n,
@@ -228,22 +354,28 @@ xapian.ready().then(async () => {
       if (!entries[n + m]) {
         return;
       }
-      const [id, {tab, skip}] = entries[n + m];
+      const [id, entry] = entries[n + m];
+      const {skip} = entry;
+      
       if (skip) {
         ignored += 1;
         return;
       }
 
-      // tab hash already been indexed
+      const isHistoryItem = id.startsWith('history_');
+      const item = entry.tab || entry.historyItem;
+      const itemUrl = item.url;
+
+      // item hash already been indexed
       if (id in ps.hashes) {
-        if (tab.url === ps.hashes[id].url) {
+        if (itemUrl === ps.hashes[id].url) {
           if (ps['clean-up'].includes(id)) {
             // console.log('cleaning old entry for re-indexing', id, ps.hashes[id].guids);
             await xapian.remove(ps.hashes[id].guids, 0, false);
             delete ps.hashes[id];
           }
           else {
-            // console.log('tab is already in database', tab.url);
+            // console.log('item is already in database', itemUrl);
             hashes[id] = ps.hashes[id];
             docs += hashes[id].guids.length;
             delete ps.hashes[id];
@@ -252,19 +384,26 @@ xapian.ready().then(async () => {
         }
       }
 
-      const frames = (await indexer.inspect(tab)).filter(o => {
-        if (o.url || o.title || o.body) {
-          return true;
-        }
-        // ignored += 1;
-        return false;
-      });
+      let frames;
+      if (isHistoryItem) {
+        frames = await indexer.inspectHistory(item);
+        item.isHistory = true;
+        item.id = id;
+      } else {
+        frames = (await indexer.inspect(item)).filter(o => {
+          if (o.url || o.title || o.body) {
+            return true;
+          }
+          return false;
+        });
+      }
+      
       if (frames.length) {
-        const guids = await indexer.add(tab, frames);
-        // console.log('added tab to database', tab.url, guids);
+        const guids = await indexer.add(item, frames);
+        console.debug('✅ Indexed', isHistoryItem ? 'history item' : 'tab', ':', itemUrl, '(', guids.length, 'documents)');
         docs += guids.length;
-        hashes[tab.id] = {
-          url: tab.url,
+        hashes[id] = {
+          url: itemUrl,
           guids
         };
       }
@@ -284,6 +423,7 @@ xapian.ready().then(async () => {
   });
   await xapian.sync();
   // ready
+  console.debug('🎉 Indexing complete! Indexed', docs, 'documents, ignored', ignored, 'items');
   document.dispatchEvent(new CustomEvent('engine-ready', {
     detail: {
       docs,
