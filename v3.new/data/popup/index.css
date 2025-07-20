@@ -327,8 +327,13 @@ body[data-engine=lunr] span[data-id="deep-search"] {
   background-color: var(--result-type-bg);
 }
 .result h2 span[data-id="number"] {
-  min-width: 20px;
-  background-color: gray;
+  min-width: 24px;
+  background-color: #666;
+  border-radius: 3px;
+  display: inline-block;
+  line-height: 16px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 #internal,
 #guide {
@@ -388,30 +393,7 @@ body:not([data-size="0"]) #rate,
 }
 
 /* History item styling */
-.result a[data-tab-id="-1"] {
-  border-left: 3px solid #0066cc;
-  padding-left: 5px;
-}
 
-.result a[data-tab-id="-1"] h2 {
-  position: relative;
-}
-
-.result a[data-tab-id="-1"] h2::before {
-  content: "🕒";
-  position: absolute;
-  left: -25px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-/* History type indicator styling */
-h2 span[data-id="type"]:not(:empty) {
-  color: #0066cc !important;
-  font-weight: 500;
-}
 
 /* Filter controls styling */
 #filter-controls {

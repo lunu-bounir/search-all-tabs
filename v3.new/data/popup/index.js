@@ -687,7 +687,7 @@ document.addEventListener('change', () => {
   document.body.dataset.menu = Boolean(document.querySelector('#results [data-id="select"]:checked'));
 });
 
-chrome.runtime.onMessage.addListener((request, sender, response) => {
+chrome.runtime.onMessage.addListener((request, _sender, response) => {
   if (request.method === 'search-interface') {
     response(true);
     chrome.runtime.sendMessage({
