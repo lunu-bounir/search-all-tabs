@@ -685,3 +685,183 @@ document.addEventListener('indexing-stat', e => {
   const {current, total} = e.detail;
   root.dataset.empty = 'Indexing new documents (' + (current / total * 100).toFixed(0) + '%). Please wait...';
 });
+
+// Filter functionality
+let currentFilter = 'all';
+
+const updateResultCounts = () => {
+  try {
+    const allResults = document.querySelectorAll('.result');
+    const tabResults = document.querySelectorAll('.result a:not([data-tab-id="-1"])');
+    const historyResults = document.querySelectorAll('.result a[data-tab-id="-1"]');
+    
+    const countAll = document.getElementById('count-all');
+    const countTabs = document.getElementById('count-tabs');
+    const countHistory = document.getElementById('count-history');
+    
+    if (countAll) countAll.textContent = allResults.length;
+    if (countTabs) countTabs.textContent = tabResults.length;
+    if (countHistory) countHistory.textContent = historyResults.length;
+  } catch (e) {
+    console.warn('Error updating result counts:', e);
+  }
+};
+
+const applyFilter = (filter) => {
+  try {
+    const results = document.querySelectorAll('.result');
+    
+    results.forEach(result => {
+      const link = result.querySelector('a');
+      if (!link) return;
+      
+      const tabId = link.dataset.tabId;
+      const isHistory = tabId === '-1';
+      
+      let shouldShow = false;
+      
+      switch (filter) {
+        case 'all':
+          shouldShow = true;
+          break;
+        case 'tabs':
+          shouldShow = !isHistory;
+          break;
+        case 'history':
+          shouldShow = isHistory;
+          break;
+      }
+      
+      if (shouldShow) {
+        result.classList.remove('filter-hidden');
+      } else {
+        result.classList.add('filter-hidden');
+      }
+    });
+    
+    // Update filter button text and icon
+    const filterText = document.getElementById('filter-text');
+    const filterIcon = document.getElementById('filter-icon');
+    
+    if (filterText && filterIcon) {
+      switch (filter) {
+        case 'all':
+          filterText.textContent = 'All';
+          filterIcon.textContent = '🔗';
+          break;
+        case 'tabs':
+          filterText.textContent = 'Tabs';
+          filterIcon.textContent = '📑';
+          break;
+        case 'history':
+          filterText.textContent = 'History';
+          filterIcon.textContent = '🕒';
+          break;
+      }
+    }
+    
+    currentFilter = filter;
+  } catch (e) {
+    console.warn('Error applying filter:', e);
+  }
+};
+
+// Filter controls event listeners
+const filterToggle = document.getElementById('filter-toggle');
+if (filterToggle) {
+  filterToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    const menu = document.getElementById('filter-menu');
+    const toggle = document.getElementById('filter-toggle');
+    
+    if (!menu || !toggle) return;
+    
+    if (menu.classList.contains('hidden')) {
+      menu.classList.remove('hidden');
+      toggle.classList.add('active');
+      updateResultCounts();
+    } else {
+      menu.classList.add('hidden');
+      toggle.classList.remove('active');
+    }
+  });
+}
+
+// Filter option clicks
+const initializeFilterOptions = () => {
+  const filterOptions = document.querySelectorAll('.filter-option');
+  filterOptions.forEach(option => {
+    option.addEventListener('click', (e) => {
+      try {
+        e.preventDefault();
+        const filter = option.dataset.filter;
+        
+        if (!filter) return;
+        
+        // Update active state
+        document.querySelectorAll('.filter-option').forEach(opt => opt.classList.remove('active'));
+        option.classList.add('active');
+        
+        // Apply filter
+        applyFilter(filter);
+        
+        // Hide menu
+        const menu = document.getElementById('filter-menu');
+        const toggle = document.getElementById('filter-toggle');
+        if (menu) menu.classList.add('hidden');
+        if (toggle) toggle.classList.remove('active');
+      } catch (e) {
+        console.warn('Error in filter option click:', e);
+      }
+    });
+  });
+};
+
+// Initialize filter options
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeFilterOptions);
+} else {
+  initializeFilterOptions();
+}
+
+// Close filter menu when clicking outside
+document.addEventListener('click', (e) => {
+  const filterControls = document.getElementById('filter-controls');
+  if (!filterControls || filterControls.contains(e.target)) return;
+  
+  const menu = document.getElementById('filter-menu');
+  const toggle = document.getElementById('filter-toggle');
+  if (menu) menu.classList.add('hidden');
+  if (toggle) toggle.classList.remove('active');
+});
+
+// Monitor results container for changes and update filter counts
+const initializeFilterObserver = () => {
+  const resultsContainer = document.getElementById('results');
+  if (resultsContainer) {
+    const observer = new MutationObserver(() => {
+      // Debounce the updates to avoid excessive calls
+      clearTimeout(observer.timeoutId);
+      observer.timeoutId = setTimeout(() => {
+        try {
+          updateResultCounts();
+          applyFilter(currentFilter);
+        } catch (e) {
+          console.warn('Filter update error:', e);
+        }
+      }, 100);
+    });
+    
+    observer.observe(resultsContainer, {
+      childList: true,
+      subtree: true
+    });
+  }
+};
+
+// Initialize observer when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeFilterObserver);
+} else {
+  initializeFilterObserver();
+}

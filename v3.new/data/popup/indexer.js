@@ -388,7 +388,7 @@ xapian.ready().then(async () => {
       if (isHistoryItem) {
         frames = await indexer.inspectHistory(item);
         item.isHistory = true;
-        item.id = id;
+        item.id = -1; // Explicit -1 for history items
       } else {
         frames = (await indexer.inspect(item)).filter(o => {
           if (o.url || o.title || o.body) {

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "version": "0.6.3",
+  "version": "0.6.4",
   "name": "Search all Tabs",
   "description": "__MSG_description__",
   "default_locale": "en",
@@ -21,7 +21,8 @@
     "scripting",
     "favicon",
     "unlimitedStorage",
-    "history"
+    "history",
+    "downloads"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -33,11 +34,7 @@
     "default_popup": "/data/popup/index.html"
   },
   "background": {
-    "service_worker": "worker.js",
-    "scripts": [
-      "context.js",
-      "worker.js"
-    ]
+    "service_worker": "worker.js"
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
