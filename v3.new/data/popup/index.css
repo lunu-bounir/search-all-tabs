@@ -100,6 +100,7 @@ b {
   height: 15px;
   background-color: var(--info-bg);
   -webkit-appearance: none;
+  appearance: none;
   border: 0;
   outline: 0;
   transition: background 300ms;
@@ -326,8 +327,13 @@ body[data-engine=lunr] span[data-id="deep-search"] {
   background-color: var(--result-type-bg);
 }
 .result h2 span[data-id="number"] {
-  min-width: 20px;
-  background-color: gray;
+  min-width: 24px;
+  background-color: #666;
+  border-radius: 3px;
+  display: inline-block;
+  line-height: 16px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 #internal,
 #guide {
@@ -384,4 +390,106 @@ body[data-engine=lunr] span[data-id="deep-search"] {
 body:not([data-size="0"]) #rate,
 #rate[data-hide=true] {
   display: none;
+}
+
+/* History item styling */
+
+
+/* Filter controls styling */
+#filter-controls {
+  position: relative;
+  display: inline-block;
+  margin-left: 8px;
+}
+
+#filter-toggle {
+  background: var(--search-bg);
+  border: 1px solid var(--search-border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--search);
+  transition: all 0.2s;
+}
+
+#filter-toggle:hover {
+  background: var(--bg-color);
+  border-color: var(--search-border-active);
+}
+
+#filter-toggle.active {
+  background: var(--search-fill);
+  color: white;
+  border-color: var(--search-fill);
+}
+
+#filter-arrow {
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+
+#filter-toggle.active #filter-arrow {
+  transform: rotate(180deg);
+}
+
+#filter-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 140px;
+  background: var(--search-bg);
+  border: 1px solid var(--search-border);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 9999;
+  margin-top: 2px;
+}
+
+#filter-menu.hidden {
+  display: none;
+}
+
+.filter-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--search);
+  transition: background 0.2s;
+}
+
+.filter-option:hover {
+  background: var(--bg-color);
+}
+
+.filter-option.active {
+  background: var(--search-fill);
+  color: white;
+}
+
+.filter-count {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.7;
+  background: var(--code-bg);
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 16px;
+  text-align: center;
+}
+
+.filter-option.active .filter-count {
+  background: rgba(255,255,255,0.2);
+  color: white;
+}
+
+/* Result filtering */
+.result.filter-hidden {
+  display: none !important;
 }

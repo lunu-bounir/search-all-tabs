@@ -39,19 +39,34 @@ const closeme = () => document.body.dataset.mode === 'tab' ? chrome.storage.loca
 }) : window.close();
 
 document.addEventListener('engine-ready', async e => {
+  if (window.logger) {
+    window.logger.debug('Extension popup opened - engine ready event received', e.detail);
+  }
   Object.assign(states, {
     ready: true
   }, e.detail);
 
   // update interface
   if (states.docs === 0) {
-    root.dataset.empty = 'Nothing to index. You need to have some tabs open.';
+    chrome.storage.local.get({'history-enabled': false}, prefs => {
+      if (prefs['history-enabled']) {
+        root.dataset.empty = 'Nothing to index. You need to have some tabs open or enable history search in options.';
+      } else {
+        root.dataset.empty = 'Nothing to index. You need to have some tabs open.';
+      }
+    });
   }
   else {
-    root.dataset.empty = `Searching among ${states.docs} document${states.docs === 1 ? '' : 's'}`;
-    if (states.ignored) {
-      root.dataset.empty += `. ${states.ignored} tab${states.ignored === 1 ? ' is' : 's are'} ignored.`;
-    }
+    chrome.storage.local.get({'history-enabled': false}, prefs => {
+      let sources = 'tabs';
+      if (prefs['history-enabled']) {
+        sources = 'tabs and browser history';
+      }
+      root.dataset.empty = `Searching among ${states.docs} document${states.docs === 1 ? '' : 's'} from ${sources}`;
+      if (states.ignored) {
+        root.dataset.empty += `. ${states.ignored} item${states.ignored === 1 ? ' is' : 's are'} ignored.`;
+      }
+    });
   }
 
   const prefs = await (new Promise(resolve => chrome.storage.local.get({
@@ -154,11 +169,17 @@ const search = query => {
       const lang = xapian.language(obj && obj.languages.length ? obj.languages[0].language : 'en');
 
       try {
+        if (window.logger) {
+          window.logger.debug('Search started:', query, 'in', lang, 'language');
+        }
         const {size, estimated} = await xapian.search({
           query,
           lang,
           length: prefs['search-size']
         });
+        if (window.logger) {
+          window.logger.debug('Search results:', size, 'found,', estimated, 'estimated');
+        }
 
         document.body.dataset.size = size;
 
@@ -180,6 +201,11 @@ const search = query => {
 
             const percent = await xapian.search.percent(index);
 
+            const isHistory = obj.isHistory || false;
+            if (window.logger) {
+              window.logger.debug('Result', index + 1, ':', obj.title, '(' + percent + '% match)', '[' + (isHistory ? 'history' : 'tab') + ']', 'tabId:', obj.tabId);
+            }
+            
             const clone = document.importNode(t.content, true);
             clone.querySelector('a').href = obj.url;
             Object.assign(clone.querySelector('a').dataset, {
@@ -203,6 +229,10 @@ const search = query => {
             );
             if (!obj.top) {
               clone.querySelector('h2 span[data-id="type"]').textContent = 'iframe';
+            } else if (obj.isHistory) {
+              clone.querySelector('h2 span[data-id="type"]').textContent = 'history';
+              clone.querySelector('h2 span[data-id="type"]').style.color = '#0066cc';
+              clone.querySelector('h2 span[data-id="type"]').title = 'From browser history';
             }
             const code = clone.querySelector('h2 code');
 
@@ -232,12 +262,16 @@ const search = query => {
             root.appendChild(clone);
           }
           catch (e) {
-            console.warn('Cannot add a result', e);
+            if (window.logger) {
+              window.logger.warn('Cannot add a result', e);
+            }
           }
         }
       }
       catch (e) {
-        console.warn(e);
+        if (window.logger) {
+          window.logger.warn('Search error:', e);
+        }
         info.textContent = e.message || 'Unknown error occurred';
       }
     });
@@ -247,6 +281,9 @@ search.controllers = [];
 
 document.getElementById('search').addEventListener('input', e => {
   const query = e.target.value.trim();
+  if (window.logger) {
+    window.logger.debug('Search query entered:', query);
+  }
   root.textContent = '';
   const info = document.getElementById('info');
   if (query && states.ready) {
@@ -328,7 +365,9 @@ const deep = async a => {
     }
   }
   catch (e) {
-    console.warn(e);
+    if (window.logger) {
+      window.logger.warn('Deep search error:', e);
+    }
   }
   xapian.release(1);
 };
@@ -362,14 +401,31 @@ document.addEventListener('click', e => {
 
     if (cmd === 'open') {
       const {tabId, windowId, frameId} = a.dataset;
-      const snippet = e.target.closest('.result').querySelector('p').content;
-      chrome.runtime.sendMessage({
-        method: 'find',
-        tabId: Number(tabId),
-        windowId: Number(windowId),
-        frameId: Number(frameId),
-        snippet
-      }, closeme);
+      
+      // Check if this is a history item (negative tabId indicates history)
+      if (Number(tabId) === -1) {
+        // This is a history item - open in new tab
+        if (window.logger) {
+          window.logger.debug('Opening history item in new tab:', a.href);
+        }
+        chrome.tabs.create({
+          url: a.href,
+          active: true
+        }, closeme);
+      } else {
+        // This is an active tab - focus it
+        if (window.logger) {
+          window.logger.debug('Focusing active tab:', Number(tabId), a.href);
+        }
+        const snippet = e.target.closest('.result').querySelector('p').content;
+        chrome.runtime.sendMessage({
+          method: 'find',
+          tabId: Number(tabId),
+          windowId: Number(windowId),
+          frameId: Number(frameId),
+          snippet
+        }, closeme);
+      }
       e.preventDefault();
     }
     else if (cmd === 'faqs') {
@@ -393,13 +449,20 @@ document.addEventListener('click', e => {
     else if (cmd === 'group' || cmd === 'delete') {
       const ids = [...document.querySelectorAll('#results [data-id=select]:checked')]
         .map(e => e.closest('a').dataset.tabId)
+        .filter(id => Number(id) !== -1) // Exclude history items
         .filter((s, i, l) => l.indexOf(s) === i)
         .map(Number);
 
-      chrome.runtime.sendMessage({
-        method: cmd,
-        ids
-      }, closeme);
+      if (ids.length > 0) {
+        chrome.runtime.sendMessage({
+          method: cmd,
+          ids
+        }, closeme);
+      } else {
+        if (window.logger) {
+          window.logger.warn('No active tabs selected for', cmd, 'operation');
+        }
+      }
     }
   }
 });
@@ -459,7 +522,9 @@ window.addEventListener('keydown', e => {
 
     if (links.length) {
       navigator.clipboard.writeText(links.join('\n')).catch(e => {
-        console.warn(e);
+        if (window.logger) {
+          window.logger.warn('Clipboard operation failed:', e);
+        }
         if (e) {
           alert(links.join('\n'));
         }
@@ -490,6 +555,7 @@ window.addEventListener('keydown', e => {
     const ids = [...document.querySelectorAll('[data-tab-id]')]
       .filter(a => meta ? Number(a.dataset.percent) >= 80 : true)
       .map(a => a.dataset.tabId)
+      .filter(id => Number(id) !== -1) // Exclude history items
       .filter((s, i, l) => l.indexOf(s) === i)
       .map(Number);
 
@@ -621,7 +687,7 @@ document.addEventListener('change', () => {
   document.body.dataset.menu = Boolean(document.querySelector('#results [data-id="select"]:checked'));
 });
 
-chrome.runtime.onMessage.addListener((request, sender, response) => {
+chrome.runtime.onMessage.addListener((request, _sender, response) => {
   if (request.method === 'search-interface') {
     response(true);
     chrome.runtime.sendMessage({
@@ -630,6 +696,25 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
   }
   else if (request.method === 'close') {
     window.close();
+  }
+  else if (request.method === 'unified-log') {
+    // Unified logging messages - just acknowledge receipt
+    // The actual logging is handled by the UnifiedLogger's chrome.storage persistence
+    if (window.logger) {
+      // Optional: Log that we received a unified log message for debugging
+      // window.logger.debug('Received unified log from', request.context);
+    }
+  }
+  else if (request.method === 'log' && window.logger) {
+    // Legacy support for old log messages
+    const { level, message, args, context } = request;
+    const logMessage = `[${context}] ${message}`;
+    
+    if (window.logger[level]) {
+      window.logger[level](logMessage, ...(args || []));
+    } else {
+      window.logger.debug(logMessage, ...(args || []));
+    }
   }
 });
 
@@ -643,3 +728,191 @@ document.addEventListener('indexing-stat', e => {
   const {current, total} = e.detail;
   root.dataset.empty = 'Indexing new documents (' + (current / total * 100).toFixed(0) + '%). Please wait...';
 });
+
+// Filter functionality
+let currentFilter = 'all';
+
+const updateResultCounts = () => {
+  try {
+    const allResults = document.querySelectorAll('.result');
+    const tabResults = document.querySelectorAll('.result a:not([data-tab-id="-1"])');
+    const historyResults = document.querySelectorAll('.result a[data-tab-id="-1"]');
+    
+    const countAll = document.getElementById('count-all');
+    const countTabs = document.getElementById('count-tabs');
+    const countHistory = document.getElementById('count-history');
+    
+    if (countAll) countAll.textContent = allResults.length;
+    if (countTabs) countTabs.textContent = tabResults.length;
+    if (countHistory) countHistory.textContent = historyResults.length;
+  } catch (e) {
+    if (window.logger) {
+      window.logger.warn('Error updating result counts:', e);
+    }
+  }
+};
+
+const applyFilter = (filter) => {
+  try {
+    const results = document.querySelectorAll('.result');
+    
+    results.forEach(result => {
+      const link = result.querySelector('a');
+      if (!link) return;
+      
+      const tabId = link.dataset.tabId;
+      const isHistory = tabId === '-1';
+      
+      let shouldShow = false;
+      
+      switch (filter) {
+        case 'all':
+          shouldShow = true;
+          break;
+        case 'tabs':
+          shouldShow = !isHistory;
+          break;
+        case 'history':
+          shouldShow = isHistory;
+          break;
+      }
+      
+      if (shouldShow) {
+        result.classList.remove('filter-hidden');
+      } else {
+        result.classList.add('filter-hidden');
+      }
+    });
+    
+    // Update filter button text and icon
+    const filterText = document.getElementById('filter-text');
+    const filterIcon = document.getElementById('filter-icon');
+    
+    if (filterText && filterIcon) {
+      switch (filter) {
+        case 'all':
+          filterText.textContent = 'All';
+          filterIcon.textContent = '🔗';
+          break;
+        case 'tabs':
+          filterText.textContent = 'Tabs';
+          filterIcon.textContent = '📑';
+          break;
+        case 'history':
+          filterText.textContent = 'History';
+          filterIcon.textContent = '🕒';
+          break;
+      }
+    }
+    
+    currentFilter = filter;
+  } catch (e) {
+    if (window.logger) {
+      window.logger.warn('Error applying filter:', e);
+    }
+  }
+};
+
+// Filter controls event listeners
+const filterToggle = document.getElementById('filter-toggle');
+if (filterToggle) {
+  filterToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    const menu = document.getElementById('filter-menu');
+    const toggle = document.getElementById('filter-toggle');
+    
+    if (!menu || !toggle) return;
+    
+    if (menu.classList.contains('hidden')) {
+      menu.classList.remove('hidden');
+      toggle.classList.add('active');
+      updateResultCounts();
+    } else {
+      menu.classList.add('hidden');
+      toggle.classList.remove('active');
+    }
+  });
+}
+
+// Filter option clicks
+const initializeFilterOptions = () => {
+  const filterOptions = document.querySelectorAll('.filter-option');
+  filterOptions.forEach(option => {
+    option.addEventListener('click', (e) => {
+      try {
+        e.preventDefault();
+        const filter = option.dataset.filter;
+        
+        if (!filter) return;
+        
+        // Update active state
+        document.querySelectorAll('.filter-option').forEach(opt => opt.classList.remove('active'));
+        option.classList.add('active');
+        
+        // Apply filter
+        applyFilter(filter);
+        
+        // Hide menu
+        const menu = document.getElementById('filter-menu');
+        const toggle = document.getElementById('filter-toggle');
+        if (menu) menu.classList.add('hidden');
+        if (toggle) toggle.classList.remove('active');
+      } catch (e) {
+        if (window.logger) {
+          window.logger.warn('Error in filter option click:', e);
+        }
+      }
+    });
+  });
+};
+
+// Initialize filter options
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeFilterOptions);
+} else {
+  initializeFilterOptions();
+}
+
+// Close filter menu when clicking outside
+document.addEventListener('click', (e) => {
+  const filterControls = document.getElementById('filter-controls');
+  if (!filterControls || filterControls.contains(e.target)) return;
+  
+  const menu = document.getElementById('filter-menu');
+  const toggle = document.getElementById('filter-toggle');
+  if (menu) menu.classList.add('hidden');
+  if (toggle) toggle.classList.remove('active');
+});
+
+// Monitor results container for changes and update filter counts
+const initializeFilterObserver = () => {
+  const resultsContainer = document.getElementById('results');
+  if (resultsContainer) {
+    const observer = new MutationObserver(() => {
+      // Debounce the updates to avoid excessive calls
+      clearTimeout(observer.timeoutId);
+      observer.timeoutId = setTimeout(() => {
+        try {
+          updateResultCounts();
+          applyFilter(currentFilter);
+        } catch (e) {
+          if (window.logger) {
+            window.logger.warn('Filter update error:', e);
+          }
+        }
+      }, 100);
+    });
+    
+    observer.observe(resultsContainer, {
+      childList: true,
+      subtree: true
+    });
+  }
+};
+
+// Initialize observer when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeFilterObserver);
+} else {
+  initializeFilterObserver();
+}
